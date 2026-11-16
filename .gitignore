@@ -1,1 +1,10 @@
 /Veloxa_Hackathon_Release_Packs/
+
+node_modules/
+dist/
+data/
+.env
+.env.*
+!.env.example
+*.local
+*.log

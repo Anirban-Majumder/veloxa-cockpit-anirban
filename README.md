@@ -4,13 +4,32 @@ A hackathon prototype for answering company questions from structured records an
 
 ## Status — 16 November 2026
 
-Architecture and evidence review only. No application, ingestion pipeline, or automated tests have been implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
+The React/Vite/Tailwind frontend starter is implemented and verified. The API, ingestion pipeline and automated answer test suite are not implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
 
 ## Run and test
 
-Setup/run command: pending implementation. Test command: pending implementation. Neither is currently available. Setup will require the original release pack at a documented local path and a hosted-model API key supplied through environment variables.
+The current frontend starter needs Bun 1.4.4. Install stable Bun using the [official installation instructions](https://bun.sh/docs/installation), or update an existing installation with `bun upgrade --stable`.
 
-The final submission must work from a fresh clone with one setup/run command after those prerequisites. One test command will run deterministic checks and at least 25 questions through the live model-backed chat pipeline, including at least five uncertainty or refusal cases.
+From the repository root:
+
+```sh
+bun install --frozen-lockfile
+bun run dev
+```
+
+Open the URL printed by Vite (normally `http://localhost:5173`). The starter displays a hello-world page with a working counter and Tailwind styling.
+
+```sh
+bun run build      # TypeScript check and production bundle
+bun run lint       # Starter lint checks
+bun run preview    # Serve the production bundle after building
+```
+
+The single root package owns dependencies; the UI lives in `apps/web`. Installed stable versions are Bun 1.4.4, React 19.3.1, Vite 8.3.8 and Tailwind CSS 4.3.5. The committed Bun lockfile records exact dependency resolutions.
+
+Setup follows the official [Bun/Vite guide](https://bun.sh/docs/guides/ecosystem/vite), [Vite React TypeScript template](https://vite.dev/guide/) and [Tailwind Vite installation](https://tailwindcss.com/docs/installation/using-vite). Tailwind uses `@tailwindcss/vite` and `@import "tailwindcss"`; no legacy Tailwind init command is required.
+
+The final full-app setup/run command and answer-test command remain pending. Full setup will require the original release pack at a documented local path and a hosted-model API key supplied through environment variables. One test command will run deterministic checks and at least 25 questions through the live model-backed chat pipeline, including at least five uncertainty or refusal cases.
 
 ## Materials and schedule
 

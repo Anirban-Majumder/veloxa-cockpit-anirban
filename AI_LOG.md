@@ -20,3 +20,11 @@
 - Corrections: the assistant initially overemphasized implementation details, proposed unnecessary separate record/review tables, and misunderstood the product inputs and desired memory. The owner clarified that daily data-room and transcript folders are ingested, repository Markdown is development documentation, and agents remember CEO conversations across days. Superseded decisions remain in the decision history.
 - Compatibility evidence: Bun 1.4.2 with `@tursodatabase/database` 0.8.3 passed a temporary local create/write/read/reopen check. This was not a benchmark, application integration test or cross-platform test.
 - Limitations: no application code or automated tests have been implemented. The remaining work includes parser and full-stack integration checks, concrete retrieval/privacy rules and end-to-end verification. Model arithmetic and unvalidated runtime citations were explicit owner choices, with accuracy to be evaluated in tests.
+
+### AI003 — Official frontend starter setup
+
+- Task: commit existing architecture work, check the official stable Bun/Vite/React/Tailwind setup, scaffold and verify a hello-world frontend.
+- Sources: official Bun installation and Vite guides, Vite getting-started documentation, and Tailwind's Vite-plugin installation documentation; npm latest tags checked for installed package versions.
+- Implementation: upgraded Bun to stable 1.4.4, generated the official React TypeScript template, adapted it to the agreed single-root-package layout and configured Tailwind's Vite plugin. Added a minimal hello-world/counter page and root development/build/lint/preview commands.
+- Verification: production build including TypeScript checks, starter lint, and a temporary Playwright browser smoke check for page rendering, counter interaction, applied Tailwind styles and absence of page errors. The first browser attempt needed an explicit path to the installed Chromium because the temporary Playwright package expected a different browser revision; the retry passed.
+- Scope: frontend starter only. No API, ingestion or mandatory answer-test suite has been implemented. Playwright was installed outside the repository for smoke verification.
