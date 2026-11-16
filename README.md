@@ -4,13 +4,13 @@ A hackathon prototype for answering company questions from structured records an
 
 ## Status — 16 November 2026
 
-Architecture and evidence review only. No application, ingestion pipeline, or automated tests have been implemented. Stack selection and the exact 14-person roster remain open.
+Architecture and evidence review only. No application, ingestion pipeline, or automated tests have been implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
 
 ## Run and test
 
-Setup/run command: pending implementation. Test command: pending implementation. Neither is currently available.
+Setup/run command: pending implementation. Test command: pending implementation. Neither is currently available. Setup will require the original release pack at a documented local path and a hosted-model API key supplied through environment variables.
 
-The final submission must work from a fresh clone with one setup/run command and include at least 25 automated test questions, including at least five uncertainty or refusal cases.
+The final submission must work from a fresh clone with one setup/run command after those prerequisites. One test command will run deterministic checks and at least 25 questions through the live model-backed chat pipeline, including at least five uncertainty or refusal cases.
 
 ## Materials and schedule
 

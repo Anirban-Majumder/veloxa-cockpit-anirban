@@ -2,7 +2,6 @@
 
 ## 16 November 2026 (IST) — Day One initial review
 
-Interpretations below are AI-proposed unless a dated owner review says otherwise. Observations report source contents. Keep each original entry and append dated revisions.
 
 Paths below are relative to `Veloxa_Hackathon_Release_Packs/`. Spreadsheet row numbers are the actual worksheet row IDs, including blank rows. T1/T2 refer to the Day One transcript files.
 
