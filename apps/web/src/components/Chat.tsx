@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, type Message, type Reply } from '../lib/api'
 import { Citation } from './Evidence'
+import { useDictation } from '../lib/dictation'
 
 const CONFIDENCE = {
   high: 'bg-[#d6efd9] text-[#1f6b33]',
@@ -37,6 +38,7 @@ export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }:
   const [busy, setBusy] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   const sentInitial = useRef(false)
+  const voice = useDictation(setDraft)
 
   useEffect(() => {
     let live = true
@@ -45,11 +47,12 @@ export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }:
     return () => { live = false }
   }, [agent, cutoff])
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages])
+  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [messages])
 
   const send = async (text: string) => {
     const q = text.trim()
     if (!q || busy) return
+    voice.stop()
     setDraft(''); setBusy(true)
     const tmp = `tmp-${Date.now()}`
     setMessages((m) => [...m, { id: tmp, role: 'user', content: q, created_at: '' }, { id: `${tmp}-a`, role: 'assistant', content: '', created_at: '', pending: true }])
@@ -77,15 +80,28 @@ export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }:
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(draft) } }}
-          placeholder={agent === 'analyst' ? 'Ask one question about the company' : `Ask ${speaker.split(' ')[0]} something`}
+          placeholder={agent === 'analyst' ? 'Ask about Veloxa…' : `Ask ${speaker.split(' ')[0]} something`}
           className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border border-ink/15 bg-white px-4 py-3 text-ink placeholder:text-ink-soft/70 focus:border-route focus:outline-none"
         />
+        {voice.supported && (
+          <button
+            type="button"
+            onClick={() => (voice.listening ? voice.stop() : voice.start(draft))}
+            aria-pressed={voice.listening}
+            aria-label={voice.listening ? 'Stop voice input' : 'Speak your question'}
+            title={voice.error ?? (voice.listening ? 'Listening… tap to stop' : 'Speak your question')}
+            className={`mic-btn ${voice.listening ? 'is-live' : ''}`}
+          >
+            <svg viewBox="0 0 8 10" aria-hidden shapeRendering="crispEdges"><path d="M3 0h2v1h1v4H5v1H3V5H2V1h1zM1 4h1v1h1v1h2V5h1V4h1v2H6v1H5v1h1v1H2V8h1V7H2V6H1z" fill="currentColor" /></svg>
+          </button>
+        )}
         <button type="submit" disabled={busy || !draft.trim()} className="h-12 rounded-2xl bg-route px-5 font-bold text-white disabled:opacity-40">
           {busy ? 'Asking…' : 'Ask'}
         </button>
+        {voice.error && <span role="status" className="sr-only">{voice.error}</span>}
       </form>,
     )
-  }, [draft, busy, agent, speaker]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, busy, agent, speaker, voice.listening, voice.error, voice.supported]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-5" aria-live="polite">

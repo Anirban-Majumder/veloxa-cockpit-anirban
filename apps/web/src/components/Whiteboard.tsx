@@ -20,7 +20,7 @@ export function Whiteboard({ concerns, loading, empty, onOpen }: {
         {top && <Note c={top} big onOpen={onOpen} />}
         {rest.map((c) => <Note key={c.id} c={c} onOpen={onOpen} />)}
       </div>
-      <p className="board-foot">Tap a note to see the evidence behind it.</p>
+      
     </section>
   )
 
@@ -40,8 +40,7 @@ function Note({ c, big, onOpen }: { c: Concern; big?: boolean; onOpen: (c: Conce
         <span className="note-rank font-display">#{c.rank}</span>
         <span className={`urgency u${c.urgency}`}>{URGENCY[c.urgency]}</span>
       </span>
-      <span className="note-title font-display">{c.title}</span>
-      {big && <span className="note-desc">{c.description}</span>}
+      <span className="note-title">{c.title}</span>
       <span className="note-meta">
         <span className="meter" aria-hidden>{[1, 2, 3].map((n) => <i key={n} className={n <= c.impact ? 'on' : ''} />)}</span>
         <span>{c.evidence.length} source{c.evidence.length === 1 ? '' : 's'}</span>

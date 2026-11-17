@@ -9,7 +9,6 @@ import { Chat } from './components/Chat'
 type Open =
   | { kind: 'concern'; concern: Concern }
   | { kind: 'person'; agent: Agent }
-  | { kind: 'analyst'; question?: string }
   | null
 
 const SUGGESTIONS = [
@@ -32,7 +31,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Open>(null)
   const [footer, setFooter] = useState<ReactNode>(null)
-  const [quick, setQuick] = useState('')
+  const [dock, setDock] = useState<ReactNode>(null)
 
   useEffect(() => {
     Promise.all([api.status(), api.agents()])
@@ -92,29 +91,26 @@ export default function App() {
           />
           <p className="hq-hint"><span className="live-dot" aria-hidden /> {agents.length} people in today · tap anyone at their desk to talk</p>
         </div>
-        <Whiteboard
-          concerns={concerns}
-          loading={loading && !error}
-          empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day.' : undefined}
-          onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
-        />
+        <aside className="hq-side">
+          <Whiteboard
+            concerns={concerns}
+            loading={loading && !error}
+            empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day.' : undefined}
+            onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
+          />
+          <section className="dock" aria-labelledby="dock-title">
+            <header className="dock-head">
+              <h2 id="dock-title" className="font-display">Ask the cockpit</h2>
+              {cutoff && <span className="dock-sub">as of {dayLabel(cutoff)}</span>}
+            </header>
+            <div className="dock-log">
+              {cutoff && <Chat key={'analyst' + cutoff} agent="analyst" cutoff={cutoff} speaker="Cockpit" suggestions={SUGGESTIONS} onFooter={setDock} />}
+            </div>
+            <div className="dock-foot">{dock}</div>
+            {status && <p className="dock-meta">{status.sources} files · {status.evidence} records · salaries never shown</p>}
+          </section>
+        </aside>
       </main>
-
-      <form
-        onSubmit={(e) => { e.preventDefault(); setOpen({ kind: 'analyst', question: quick.trim() || undefined }); setQuick('') }}
-        className="hq-ask"
-      >
-        <label htmlFor="quick-ask" className="hq-ask-label font-display">Ask the cockpit</label>
-        <input
-          id="quick-ask"
-          value={quick}
-          onChange={(e) => setQuick(e.target.value)}
-          placeholder="Ask anything about Veloxa…"
-          className="hq-ask-input"
-        />
-        <button type="submit" className="px-btn is-go">Ask ▸</button>
-        {status && <span className="hq-ask-meta">{status.sources} files · {status.evidence} records · salaries never shown</span>}
-      </form>
 
       {open?.kind === 'concern' && (
         <Panel title={open.concern.title} subtitle={`Worry ${open.concern.rank} of 3`} onClose={close}>
@@ -126,11 +122,6 @@ export default function App() {
           avatar={open.agent.employee_id}>
           <Chat key={open.agent.employee_id + cutoff} agent={open.agent.employee_id} cutoff={cutoff} speaker={open.agent.full_name}
             suggestions={['What are you working on right now?', 'What’s getting in your way?']} onFooter={setFooter} />
-        </Panel>
-      )}
-      {open?.kind === 'analyst' && cutoff && (
-        <Panel full title="Ask about Veloxa" subtitle={`Using what we knew on ${dayLabel(cutoff)}`} onClose={close} footer={footer}>
-          <Chat key={'analyst' + cutoff} agent="analyst" cutoff={cutoff} speaker="Cockpit" suggestions={SUGGESTIONS} initial={open.question} onFooter={setFooter} />
         </Panel>
       )}
     </div>
