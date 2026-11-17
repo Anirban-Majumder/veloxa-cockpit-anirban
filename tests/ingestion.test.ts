@@ -70,7 +70,8 @@ describe("salary privacy (A002)", () => {
     const { pack, ids } = await buildEvidencePack(db, day(2).releasedAt);
     expect(payroll.some((r) => ids.has(r.id))).toBe(false);
     expect(pack).not.toContain("Days Payable");
-    expect(pack).toMatch(/Feb-2026: gross Rs\. \d+ across 19 employees/);
+    // No derived payroll totals: month differences would reveal a joiner's pay by subtraction.
+    expect(pack).not.toMatch(/payroll totals/i);
   });
 });
 

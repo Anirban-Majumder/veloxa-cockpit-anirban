@@ -5,8 +5,9 @@ const MAX_TABLE_ROWS = 40;
 
 /** Builds the cutoff-filtered evidence pack given to the model. Restricted rows are excluded; large tables are summarised. */
 export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack: string; ids: Set<number> }> {
-  const all = await evidenceAtCutoff(db, cutoff, true);
-  const visible = all.filter((r) => !r.metadata_json || JSON.parse(r.metadata_json).restricted == null);
+  // Restricted rows (individual pay) are excluded entirely. No derived payroll totals are emitted:
+  // month-over-month totals let one joiner's pay be recovered by subtraction (A002).
+  const visible = await evidenceAtCutoff(db, cutoff);
   const ids = new Set(visible.map((r) => r.id));
 
   const groups = new Map<string, EvidenceRow[]>();
@@ -29,8 +30,6 @@ export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack:
     }
   }
 
-  const payroll = payrollTotals(all.filter((r) => !ids.has(r.id)));
-  if (payroll) parts.push(`\n### Derived: payroll totals (individual rows withheld from CEO view)\n${payroll}`);
   return { pack: parts.join("\n"), ids };
 }
 
@@ -65,20 +64,4 @@ function summariseTable(rows: EvidenceRow[]): string {
     }
   }
   return lines.join("\n");
-}
-
-/** Month totals across all employees only; never per person (A002). */
-function payrollTotals(rows: EvidenceRow[]): string | undefined {
-  const totals = new Map<string, { gross: number; n: number }>();
-  for (const r of rows) {
-    if (!r.data_json) continue;
-    const d = JSON.parse(r.data_json) as Record<string, unknown>;
-    const month = d["Month"], gross = Number(d["Gross (Rs.)"]);
-    if (typeof month !== "string" || !Number.isFinite(gross)) continue;
-    const t = totals.get(month) ?? { gross: 0, n: 0 };
-    totals.set(month, { gross: t.gross + gross, n: t.n + 1 });
-  }
-  // Suppress small groups that could reveal an individual by subtraction.
-  const lines = [...totals].filter(([, t]) => t.n >= 5).map(([m, t]) => `${m}: gross Rs. ${t.gross} across ${t.n} employees`);
-  return lines.length ? lines.join("\n") : undefined;
 }
