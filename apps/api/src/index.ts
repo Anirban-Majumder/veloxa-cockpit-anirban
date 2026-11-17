@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { openDb } from "../../../src/db/client";
 import { releasedCutoffs } from "../../../src/retrieval/evidence";
 import { concernCutoffs, concernsAt } from "../../../src/concerns/queries";
-import { ask, history } from "../../../src/ai/chat";
+import { ask, history, newConversation } from "../../../src/ai/chat";
 
 const app = new Hono();
 
@@ -50,6 +50,13 @@ app.get("/api/chat/:agent", async (c) => {
   const agent = c.req.param("agent");
   const cutoff = c.req.query("cutoff") ?? (await defaultCutoff());
   return c.json(await history(await openDb(), agent === "analyst" ? null : agent, cutoff));
+});
+
+/** Start a new conversation: the old one stays stored but no longer feeds the model. */
+app.post("/api/chat/:agent/new", async (c) => {
+  const agent = c.req.param("agent");
+  await newConversation(await openDb(), agent === "analyst" ? null : agent);
+  return c.json({ ok: true });
 });
 
 app.post("/api/chat/:agent", async (c) => {

@@ -163,21 +163,17 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 @keyframes bob { 50% { transform: translateY(-2px) } }
 
 /* Right column: board + cockpit chat dock */
-.hq-side { display: flex; flex-direction: column; gap: 16px; min-height: 0; height: calc(100dvh - 100px); position: sticky; top: 16px; }
+.hq-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
 .hq { grid-template-rows: auto 1fr; }
-.dock { flex: 1 1 0; min-height: 260px; display: flex; flex-direction: column; background: var(--paper-px); color: var(--color-ink); box-shadow: 0 0 0 4px var(--trim), inset 0 0 0 3px #c9bf9f; }
-.dock-head { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 12px; background: #2c3b4e; color: #fff7e2; border-bottom: 3px solid var(--trim); }
-.dock-head h2 { font-size: 16px; font-weight: 700; }
-.dock-sub { font: 500 11px var(--font-display); color: #b9c6d3; text-transform: uppercase; letter-spacing: .08em; }
-.dock-log { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; font-size: 14px; }
-.dock-log :where(.rounded-2xl, .rounded-xl, .rounded-lg, .rounded-full, .rounded-bl-md, .rounded-br-md) { border-radius: 0; }
-.dock-log .bg-white { box-shadow: 0 0 0 2px #2a211626; }
-.dock-foot { padding: 8px 10px; border-top: 3px solid #d8cfb2; background: #ebe4cf; }
-.dock-foot textarea { min-height: 2.6rem; padding: .5rem .75rem; border-radius: 0; border: 0; box-shadow: 0 0 0 2px var(--trim); font-size: 15px; }
-.dock-foot button[type=submit] { height: 2.6rem; border-radius: 0; padding: 0 14px; background: var(--gold); color: var(--trim); font-family: var(--font-display); box-shadow: inset -3px -3px 0 #b07b00, inset 3px 3px 0 #ffd25e, 0 0 0 2px var(--trim); }
-.dock-meta { padding: 4px 12px 6px; font: 500 11px var(--font-display); color: #8b7f63; background: #ebe4cf; }
+.dock { display: flex; flex-direction: column; gap: 8px; padding: 0 0 10px; background: var(--paper-px); color: var(--color-ink); box-shadow: 0 0 0 4px var(--trim), inset 0 0 0 3px #c9bf9f; }
+.dock-head { display: block; padding: 8px 12px; background: #2c3b4e; color: #fff7e2; border-bottom: 3px solid var(--trim); font-size: 16px; font-weight: 700; }
+.dock-row { padding: 0 10px; }
+.dock-row textarea { width: 100%; resize: none; padding: 8px 10px; font-size: 15px; background: #fffdf6; color: var(--color-ink); box-shadow: 0 0 0 2px var(--trim); border: 0; }
+.dock-row textarea:focus { outline: 3px solid #9fd3e8; outline-offset: 2px; }
+.dock-actions { display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+.dock-meta { flex: 1; font: 500 11px var(--font-display); color: #8b7f63; }
 .mic-btn { flex: none; display: grid; place-items: center; width: 2.6rem; height: 2.6rem; min-height: 3rem; color: var(--trim); background: #fff7e2; box-shadow: inset -3px -3px 0 #d8cfb2, 0 0 0 2px var(--trim); cursor: pointer; }
-.dock-foot .mic-btn { min-height: 0; }
+.dock .mic-btn { min-height: 0; }
 .mic-btn svg { width: 16px; height: 20px; image-rendering: pixelated; }
 .mic-btn:hover { background: #ffe7a3; }
 .mic-btn.is-live { background: #d43d2f; color: #fff; box-shadow: inset -3px -3px 0 #9b2a20, 0 0 0 2px var(--trim), 0 0 0 6px #d43d2f55; animation: blink-px 1s steps(1) infinite; }
@@ -197,8 +193,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
   .hq-floor { grid-template-columns: 1fr; padding: 12px; }
   .office-scroll { width: 100%; overflow-x: auto; }
   .office { min-width: 640px; }
-  .hq-side { position: static; height: auto; }
-  .dock { min-height: 420px; }
+  .hq-side { position: static; }
 }
 @media (max-width: 600px) {
   .hq-ask { flex-wrap: nowrap; padding: 8px 10px; }

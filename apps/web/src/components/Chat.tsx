@@ -28,8 +28,10 @@ function Answer({ r }: { r: Reply }) {
 }
 
 /** Reusable conversation with the analyst ("analyst") or a person agent (employee ID). History persists per agent. */
-export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }: {
+export function Chat({ agent, cutoff, speaker, suggestions, initial, fresh, onFooter }: {
   agent: string; cutoff: string; speaker: string; suggestions?: string[]; initial?: string
+  /** Start empty instead of loading saved history (the analyst chat lasts one page visit). */
+  fresh?: boolean
   onFooter: (node: React.ReactNode) => void
 }) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -42,10 +44,11 @@ export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }:
 
   useEffect(() => {
     let live = true
+    if (fresh) { setLoaded(true); return }
     setLoaded(false)
     api.history(agent, cutoff).then((m) => { if (live) { setMessages(m); setLoaded(true) } }).catch(() => live && setLoaded(true))
     return () => { live = false }
-  }, [agent, cutoff])
+  }, [agent, cutoff, fresh])
 
   useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [messages])
 

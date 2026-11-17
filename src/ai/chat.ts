@@ -40,8 +40,15 @@ Knowledge cutoff: ${cutoff}.`;
 
 async function conversationFor(db: Db, agentId: string | null): Promise<number> {
   const found = (await (await db.prepare(
-    "SELECT id FROM conversations WHERE user_id = 'ceo' AND kind = ? AND agent_id IS ? ORDER BY id LIMIT 1")).get(agentId ? "person" : "analyst", agentId)) as { id: number } | undefined;
+    "SELECT id FROM conversations WHERE user_id = 'ceo' AND kind = ? AND agent_id IS ? ORDER BY id DESC LIMIT 1")).get(agentId ? "person" : "analyst", agentId)) as { id: number } | undefined;
   if (found) return found.id;
+  const row = (await (await db.prepare(
+    "INSERT INTO conversations (user_id, agent_id, kind, created_at) VALUES ('ceo', ?, ?, ?) RETURNING id")).get(agentId, agentId ? "person" : "analyst", new Date().toISOString())) as { id: number };
+  return row.id;
+}
+
+/** Starts a fresh conversation (the latest one is the live one); earlier messages stay stored but unused. */
+export async function newConversation(db: Db, agentId: string | null): Promise<number> {
   const row = (await (await db.prepare(
     "INSERT INTO conversations (user_id, agent_id, kind, created_at) VALUES ('ceo', ?, ?, ?) RETURNING id")).get(agentId, agentId ? "person" : "analyst", new Date().toISOString())) as { id: number };
   return row.id;

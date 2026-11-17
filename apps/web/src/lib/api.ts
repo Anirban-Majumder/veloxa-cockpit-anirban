@@ -24,6 +24,7 @@ export const api = {
   agents: () => fetch('/api/agents').then((r) => json<Agent[]>(r)),
   concerns: (cutoff: string) => fetch(`/api/concerns?cutoff=${encodeURIComponent(cutoff)}`).then((r) => json<{ cutoff: string | null; concerns: Concern[]; message?: string }>(r)),
   history: (agent: string, cutoff: string) => fetch(`/api/chat/${agent}?cutoff=${encodeURIComponent(cutoff)}`).then((r) => json<Message[]>(r)),
+  newChat: (agent: string) => fetch(`/api/chat/${agent}/new`, { method: 'POST' }).then((r) => json<{ ok: boolean }>(r)),
   ask: (agent: string, message: string, cutoff: string) =>
     fetch(`/api/chat/${agent}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, cutoff }), signal: AbortSignal.timeout(ASK_TIMEOUT_MS) })
       .then((r) => json<Reply>(r))

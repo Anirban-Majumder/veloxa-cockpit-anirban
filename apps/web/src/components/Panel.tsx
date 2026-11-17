@@ -1,10 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 /** Shared pixel-window shell: a right-hand sidebar on wide screens, full screen on phones (or always, with `full`). */
-export function Panel({ title, subtitle, onClose, full, children, footer, avatar }: {
+export function Panel({ title, subtitle, onClose, full, children, footer, avatar, actions }: {
   title: ReactNode; subtitle?: ReactNode; onClose: () => void; full?: boolean; children: ReactNode; footer?: ReactNode
   /** Employee ID whose office sprite is shown in the title bar. */
   avatar?: string
+  /** Extra title-bar buttons, shown before Close. */
+  actions?: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -32,6 +34,7 @@ export function Panel({ title, subtitle, onClose, full, children, footer, avatar
             <h2 className="font-display text-xl leading-tight sm:text-2xl">{title}</h2>
             {subtitle && <div className="mt-0.5 text-sm text-[#b9c6d3]">{subtitle}</div>}
           </div>
+          {actions}
           <button type="button" onClick={onClose} className="px-btn" aria-label="Close panel">✕</button>
         </header>
         <div className={`flex-1 overflow-y-auto px-5 py-5 sm:px-7 ${full ? 'mx-auto w-full max-w-3xl' : ''}`}>{children}</div>
