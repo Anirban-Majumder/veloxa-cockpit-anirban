@@ -91,7 +91,7 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
   return (
     <>
       <Img file="DESK_FRONT" x={x} y={y} w={48} h={32} z={y + 32} />
-      <Img file={screen} x={x + 16} y={y - 14} w={16} h={32} z={y + 18} />
+      <Img file={screen} x={x + 16} y={y - 8} w={16} h={32} z={y + 24} />
       <Img file="CUSHIONED_CHAIR_BACK" x={x + 16} y={y + 30} w={16} h={16} z={y + 40} />
       {agent && (
         <>
@@ -102,8 +102,8 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
           />
           <button
             type="button"
-            className={`desk-hit ${active ? 'is-active' : ''}`}
-            style={at(x - 4, y - 14, 56, 66, 900)}
+            className={`desk-hit at-desk ${active ? 'is-active' : ''}`}
+            style={at(x - 4, y - 8, 56, 60, 900)}
             onClick={() => onOpen(agent)}
             onMouseEnter={() => onHover(agent.employee_id)}
             onMouseLeave={() => onHover(null)}

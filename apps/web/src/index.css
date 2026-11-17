@@ -71,6 +71,8 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .desk-hit:hover, .desk-hit.is-active { background: radial-gradient(ellipse at 50% 70%, #ffe08a33, transparent 70%); }
 .desk-hit:focus-visible { outline: 2px solid #ffe08a; outline-offset: 0; }
 .nameplate { position: absolute; left: 50%; bottom: -2%; transform: translate(-50%, 100%); font: 700 clamp(7px, 1.1cqw, 12px)/1 var(--font-sans); color: #f4f1e8; background: #111821e0; padding: .3em .55em; border-radius: 3px; white-space: nowrap; box-shadow: 0 1px 0 #0006; }
+.desk-hit.at-desk .nameplate { bottom: auto; top: 2%; transform: translate(-50%, -100%); }
+.desk-hit.at-desk .speech { left: 62%; top: 28%; }
 .desk-hit.is-active .nameplate { background: #ffe08a; color: #1b2430; }
 .speech { position: absolute; left: 62%; top: -6%; font: 700 clamp(7px, 1cqw, 11px)/1 var(--font-sans); color: #26343b; background: #fffaf0; padding: .35em .5em; border-radius: 6px 6px 6px 0; box-shadow: 0 0 0 2px #26343b; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
 .desk-hit.is-active .speech { opacity: 1; transform: none; }
