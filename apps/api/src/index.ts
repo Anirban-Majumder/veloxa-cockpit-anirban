@@ -20,7 +20,7 @@ app.get("/api/status", async (c) => {
     evidence: await count("SELECT COUNT(*) AS n FROM evidence"),
     agents: await count("SELECT COUNT(*) AS n FROM agents"),
     concernCutoffs: await concernCutoffs(db),
-    model: process.env.BIFROST_MODEL ?? null,
+    model: process.env.LLM_MODEL ?? null,
   });
 });
 

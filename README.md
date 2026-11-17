@@ -52,7 +52,7 @@ All packs arrived upfront. Treat each day’s sources as available from 10:00 AM
 
 ## Ingestion and top concerns (Day 2)
 
-Copy `.env.example` to `.env` and set `BIFROST_BASE_URL` and `BIFROST_MODEL` (any OpenAI-compatible endpoint; `BIFROST_API_KEY` is optional and only sent when set). Put the release pack at `Veloxa_Hackathon_Release_Packs/` or set `VELOXA_RELEASE_DIR`.
+Copy `.env.example` to `.env` and set `LLM_BASE_URL` and `LLM_MODEL` (any OpenAI-compatible endpoint; `LLM_API_KEY` is optional and only sent when set). Put the release pack at `Veloxa_Hackathon_Release_Packs/` or set `VELOXA_RELEASE_DIR`.
 
 ```sh
 bun run ingest        # ingest all DayN_* folders, then generate top concerns at the latest cutoff

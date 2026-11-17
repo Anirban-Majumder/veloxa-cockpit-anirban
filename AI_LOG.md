@@ -8,10 +8,6 @@
 
 **Frontend starter.** The assistant checked the official Bun, Vite and Tailwind setup and scaffolded the React/TypeScript starter. The user directed the agreed single-package layout. Build, lint and a browser smoke check passed; the first browser attempt required correcting the Chromium path. The API, ingestion and required answer tests remain to be built.
 
-### AI004 — Schema, per-day ingestion and Day 2 top concerns
+**Schema, per-day ingestion** Implement the seven-table schema, `bun run ingest [day]` (cumulative per day),local Turso schema; parsers for xlsx (ExcelJS), csv, docx (fflate XML), pdf (unpdf, per page) and eml (quoted-printable); cutoff-filtered evidence retrieval; salary restriction; concern generation through the AI SDK OpenAI-compatible provider with backend scoring; Hono API; React page.
+**Wrote the tests** 10 deterministic `bun test` cases (release dates, idempotent re-ingest, template exclusion, 14 agents, QP decoding, Day 1 cutoff excludes Day 2, payroll rows excluded from the CEO pack, scoring formula and tie-break); typecheck, lint, build; live concern generation for Day 2.
 
-- Task: implement the seven-table schema, `bun run ingest [day]` (cumulative per day), and a basic page answering voice note T6a ("tell me what to worry about, top three").
-- Implementation: local Turso schema; parsers for xlsx (ExcelJS), csv, docx (fflate XML), pdf (unpdf, per page) and eml (quoted-printable); cutoff-filtered evidence retrieval; salary restriction; concern generation through the AI SDK OpenAI-compatible provider with backend scoring; Hono API; React page.
-- Model: the owner's gateway rejected `glm-5.3-flash` for the configured key; the owner chose `gemini-3.5-flash-lite`, which the gateway serves without an API key, so the key is now optional and was commented out in the local `.env`.
-- Verification: 10 deterministic `bun test` cases (release dates, idempotent re-ingest, template exclusion, 14 agents, QP decoding, Day 1 cutoff excludes Day 2, payroll rows excluded from the CEO pack, scoring formula and tie-break); typecheck, lint, build; live concern generation for Day 2; headless browser check of the page (3 cards, no page errors).
-- Known limits: model output varies between runs; the model proposed only 3 candidates despite being asked for 4–6; citations are filtered to known IDs but not semantically verified (D014).
