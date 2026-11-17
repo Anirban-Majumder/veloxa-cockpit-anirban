@@ -4,7 +4,7 @@ import { discoverReleases } from "../src/ingestion/releases";
 import { ingestRelease } from "../src/ingestion/ingest";
 import { evidenceAtCutoff } from "../src/retrieval/evidence";
 import { buildEvidencePack } from "../src/concerns/context";
-import { rankConcerns, scoreConcern } from "../src/concerns/generate";
+import { capScores, rankConcerns, scoreConcern } from "../src/concerns/generate";
 
 const releases = discoverReleases();
 const day = (n: number) => releases.find((r) => r.day === n)!;
@@ -84,5 +84,17 @@ describe("concern scoring (D019)", () => {
     const b = { id: "b", impact: 2, urgency: 3, evidence_strength: 1 }; // 8
     const c = { id: "c", impact: 3, urgency: 3, evidence_strength: 3 }; // 12
     expect(rankConcerns([a, b, c]).map((x) => x.id)).toEqual(["c", "b", "a"]);
+  });
+});
+
+describe("evidence-strength guards", () => {
+  const byId = new Map([[1, { path: "a.pdf" }], [2, { path: "a.pdf" }], [3, { path: "b.eml" }]]);
+  const base = { title: "Atlas slipped", description: "GA moved.", evidence_strength: 3, reasons: { evidence_strength: "r" } };
+  test("conflicts are capped at 1", () => {
+    expect(capScores({ ...base, description: "The sources conflict on ARR.", evidence: [{ id: 1 }, { id: 3 }] }, byId).evidence_strength).toBe(1);
+  });
+  test("corroborated needs two distinct files", () => {
+    expect(capScores({ ...base, evidence: [{ id: 1 }, { id: 2 }] }, byId).evidence_strength).toBe(2);
+    expect(capScores({ ...base, evidence: [{ id: 1 }, { id: 3 }] }, byId).evidence_strength).toBe(3);
   });
 });
