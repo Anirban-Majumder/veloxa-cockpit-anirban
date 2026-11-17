@@ -4,19 +4,32 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --bun vite --config apps/web/vite.config.ts",
-    "start": "bun run dev",
+    "dev": "bun scripts/dev.ts",
+    "start": "bun scripts/dev.ts",
     "build": "tsc -b apps/web/tsconfig.json && bun --bun vite build --config apps/web/vite.config.ts",
-    "typecheck": "tsc -b apps/web/tsconfig.json",
-    "lint": "oxlint apps/web/src apps/web/vite.config.ts",
-    "preview": "bun --bun vite preview --config apps/web/vite.config.ts"
+    "typecheck": "tsc -b apps/web/tsconfig.json && tsc -p tsconfig.server.json",
+    "lint": "oxlint apps/web/src apps/web/vite.config.ts apps/api/src src scripts",
+    "preview": "bun --bun vite preview --config apps/web/vite.config.ts",
+    "ingest": "bun scripts/ingest.ts",
+    "api": "bun --watch apps/api/src/index.ts",
+    "dev:web": "bun --bun vite --config apps/web/vite.config.ts",
+    "test": "bun test tests"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.92",
+    "@tursodatabase/database": "^0.8.3",
+    "ai": "^7.0.173",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "hono": "^4.13.19",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "unpdf": "^2.2.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.5",
+    "@types/bun": "^1.4.4",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

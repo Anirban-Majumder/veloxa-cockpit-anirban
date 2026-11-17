@@ -4,7 +4,7 @@ A hackathon prototype for answering company questions from structured records an
 
 ## Status — 16 November 2026
 
-The React/Vite/Tailwind frontend starter is implemented and verified. The API, ingestion pipeline and automated answer test suite are not implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
+The React/Vite/Tailwind frontend starter is implemented and verified. Ingestion, the database schema, the API and the Day 2 top-three-concerns page are implemented. Person/analyst chat and the 25-question answer suite are not yet implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
 
 ## Run and test
 
@@ -49,3 +49,22 @@ All packs arrived upfront. Treat each day’s sources as available from 10:00 AM
 - [Transcript notes](TRANSCRIPT_NOTES.md): discrepancies and evidence requiring review.
 - [Decisions](DECISIONS.md): choices and their rationale.
 - [AI log](AI_LOG.md): assistance used, mistakes, and corrections.
+
+## Ingestion and top concerns (Day 2)
+
+Copy `.env.example` to `.env` and set `BIFROST_BASE_URL` and `BIFROST_MODEL` (any OpenAI-compatible endpoint; `BIFROST_API_KEY` is optional and only sent when set). Put the release pack at `Veloxa_Hackathon_Release_Packs/` or set `VELOXA_RELEASE_DIR`.
+
+```sh
+bun run ingest        # ingest all DayN_* folders, then generate top concerns at the latest cutoff
+bun run ingest 2      # ingest Day 1 + Day 2 only (cumulative); concerns as of Day 2 10:00 IST
+bun run ingest 2 --no-concerns      # evidence only
+bun run ingest 2 --regen-concerns   # force concern regeneration
+bun run dev           # API (port 8787) + UI (http://localhost:5173)
+bun test tests        # deterministic ingestion, cutoff, privacy and scoring tests
+```
+
+- Each `DayN_Ddd_DDMon` folder is treated as released at 10:00 IST on that date. Only `data_room/` and `transcripts/` are ingested; `data_room/templates/` and `brief/` are skipped.
+- Re-running is idempotent (`(path, sha256)` per source); a changed file becomes a new source version and the latest version at a cutoff wins.
+- Spreadsheet/CSV rows keep structured fields in `evidence.data_json`; documents are split by paragraph/page; emails are one row each.
+- Individual payroll rows are tagged `restricted: individual_salary` and never reach the CEO view or the model; only monthly totals over at least 5 employees are passed.
+- Concerns: the model proposes candidates with 1–3 factor scores, reasons, uncertainty and evidence IDs; the backend drops unknown citations, computes `2 × impact + urgency + evidence strength`, ranks (ties by urgency, then impact) and stores them per knowledge cutoff. The home page shows the top three with expandable evidence.
