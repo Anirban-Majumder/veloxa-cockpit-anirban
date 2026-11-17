@@ -16,13 +16,18 @@ async function json<T>(res: Response): Promise<T> {
   return body as T
 }
 
+/** A stalled model call must not leave the chat spinning forever (the server retries invalid JSON once). */
+const ASK_TIMEOUT_MS = 90_000
+
 export const api = {
   status: () => fetch('/api/status').then((r) => json<Status>(r)),
   agents: () => fetch('/api/agents').then((r) => json<Agent[]>(r)),
   concerns: (cutoff: string) => fetch(`/api/concerns?cutoff=${encodeURIComponent(cutoff)}`).then((r) => json<{ cutoff: string | null; concerns: Concern[]; message?: string }>(r)),
   history: (agent: string, cutoff: string) => fetch(`/api/chat/${agent}?cutoff=${encodeURIComponent(cutoff)}`).then((r) => json<Message[]>(r)),
   ask: (agent: string, message: string, cutoff: string) =>
-    fetch(`/api/chat/${agent}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, cutoff }) }).then((r) => json<Reply>(r)),
+    fetch(`/api/chat/${agent}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, cutoff }), signal: AbortSignal.timeout(ASK_TIMEOUT_MS) })
+      .then((r) => json<Reply>(r))
+      .catch((e: Error) => { throw e.name === 'TimeoutError' ? new Error('The answer took too long. Your question is back in the box; please retry.') : e }),
 }
 
 export const dayLabel = (iso: string) =>

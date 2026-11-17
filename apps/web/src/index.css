@@ -53,3 +53,36 @@ body { background: var(--color-floor); color: var(--color-ink); font-family: var
 }
 
 :focus-visible { outline: 3px solid var(--color-route); outline-offset: 2px; border-radius: 6px; }
+
+/* Pixel office (ported from feat/living-office; furniture sprites in public/office). */
+.scene-wrap { border: 8px solid #15202c; border-radius: 6px; box-shadow: 0 20px 50px -20px #10182299; overflow: hidden; }
+.scene { position: relative; aspect-ratio: 1.75; background: #303c4a; image-rendering: pixelated; isolation: isolate; }
+.wood-room { position: absolute; inset: 10% 48% 0 0; background-color: #795537;
+  background-image: repeating-linear-gradient(0deg, transparent 0 17px, #35281945 18px 20px), repeating-linear-gradient(90deg, transparent 0 58px, #34261938 59px 61px); }
+.lounge-room { position: absolute; inset: 10% 0 18% 52%; background: #3c6989; box-shadow: inset 0 6px #213a51; }
+.kitchen { position: absolute; bottom: 0; right: 0; width: 48%; height: 18%; background: repeating-conic-gradient(#c0c3c7 0% 25%, #343b48 0% 50%) 0/34px 34px; }
+.wall-top { position: absolute; inset: 0 0 90%; background: #293747; border-bottom: 6px solid #182531; z-index: -1; }
+.wall-divider { position: absolute; left: 50%; top: 0; width: 2%; height: 34%; background: #1c2a38; box-shadow: 0 1px #0e1922; }
+.furniture { position: absolute; height: auto; pointer-events: none; }
+.whiteboard-btn { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; z-index: 4; }
+.whiteboard-btn img { display: block; width: 100%; height: auto; }
+.whiteboard-btn:hover img { filter: drop-shadow(0 0 5px #efd998); }
+.room-label { position: absolute; bottom: 4%; font-size: 11px; color: #f5d8ab99; letter-spacing: 2px; }
+.room-label.engineering { left: 5%; }
+.room-label.lounge { left: auto; right: 2%; bottom: auto; top: 13%; color: #c5e3ed88; }
+.person { position: absolute; width: 4.5%; padding: 0; border: 0; background: none; cursor: pointer; transform: translate(-50%, -50%); z-index: 5; color: #dce4ed; }
+.person:hover, .person:focus-visible, .person.selected { z-index: 6; }
+.character { display: block; width: 100%; height: auto; image-rendering: pixelated; filter: drop-shadow(0 3px 0 #0002); }
+.person .character { animation: idle 3.8s steps(2, end) infinite; animation-delay: inherit; }
+.person:hover .character, .person.selected .character { filter: drop-shadow(0 0 5px #efd998); }
+.nameplate { display: block; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 11px; line-height: 1.2; background: #162635e8; padding: 3px 7px; border: 1px solid #88999b66; white-space: nowrap; box-shadow: 2px 2px #12212e; }
+.nameplate small { display: block; font-size: 9px; color: #b3c4ce; margin-top: 1px; }
+.speech { position: absolute; top: -15px; right: -15px; background: #f0ead7; color: #35424c; font-size: 11px; padding: 2px 5px; border: 2px solid #27394a; opacity: 0; transition: opacity .15s; }
+.person:hover .speech, .person:focus-visible .speech, .person.selected .speech { opacity: 1; }
+.coffee-steam { position: absolute; left: 75%; top: 50%; color: #e5d4bf; animation: steam 3s infinite; font-size: 20px; }
+@keyframes idle { 50% { transform: translateY(-2px) } }
+@keyframes steam { 0%, 100% { opacity: .2; transform: translateY(2px) } 50% { opacity: .7; transform: translateY(-3px) } }
+@media (max-width: 760px) {
+  .scene-wrap { overflow-x: auto; border-width: 5px; }
+  .scene { min-width: 720px; }
+}

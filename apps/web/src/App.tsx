@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { api, dayLabel, type Agent, type Concern, type Status } from './lib/api'
 import { Whiteboard } from './components/Whiteboard'
 import { ConcernDetail } from './components/ConcernDetail'
-import { People } from './components/People'
+import { Office } from './components/Office'
 import { Panel } from './components/Panel'
 import { Chat } from './components/Chat'
 
@@ -75,14 +75,21 @@ export default function App() {
 
         {error && <p role="alert" className="mt-6 rounded-xl bg-[#fbd9c9] p-4 text-alarm">{error}</p>}
 
-        <main className="mt-8 grid gap-8 lg:grid-cols-[1fr_20rem]">
+        <main className="mt-8 space-y-10">
+          <div id="whiteboard" className="scroll-mt-6">
           <Whiteboard
             concerns={concerns}
             loading={loading && !error}
             empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day to rank them.' : undefined}
             onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
           />
-          <People agents={agents} onOpen={(a) => setOpen({ kind: 'person', agent: a })} />
+          </div>
+          <Office
+            agents={agents}
+            selected={open?.kind === 'person' ? open.agent.employee_id : undefined}
+            onOpen={(a) => setOpen({ kind: 'person', agent: a })}
+            onWhiteboard={() => document.getElementById('whiteboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          />
         </main>
 
         {status && (

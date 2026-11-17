@@ -58,6 +58,7 @@ export function Chat({ agent, cutoff, speaker, suggestions, initial, onFooter }:
       setMessages((m) => m.map((x) => (x.id === `${tmp}-a` ? { ...x, pending: false, content: reply.answer, reply } : x)))
     } catch (e) {
       setMessages((m) => m.map((x) => (x.id === `${tmp}-a` ? { ...x, pending: false, error: (e as Error).message } : x)))
+      setDraft((d) => d || q)
     } finally { setBusy(false) }
   }
 
