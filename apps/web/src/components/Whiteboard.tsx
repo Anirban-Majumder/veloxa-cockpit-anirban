@@ -12,7 +12,6 @@ export function Whiteboard({ concerns, loading, empty, onOpen }: {
     <section aria-labelledby="board-title" className="board">
       <header className="board-head">
         <h2 id="board-title" className="font-display">What to worry about</h2>
-        <span className="board-sub">{concerns.length ? `${concerns.length} pinned` : ''}</span>
       </header>
       <div className="board-cork">
         {loading && <p className="board-empty">Reading the morning’s files…</p>}

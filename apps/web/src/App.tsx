@@ -77,6 +77,7 @@ export default function App() {
           <span className="font-display">Veloxa <b>HQ</b></span>
         </div>
         <h1 className="hq-greeting font-display">{greeting()}</h1>
+        {agents.length > 0 && <span className="hq-people"><span className="live-dot" aria-hidden /> {agents.length} in the office</span>}
         {status && status.releases.length > 0 && (
           <fieldset className="hq-days">
             <legend className="sr-only">What the company knew on</legend>
@@ -105,7 +106,6 @@ export default function App() {
             onOpen={(a) => setOpen({ kind: 'person', agent: a })}
             onWhiteboard={focusBoard}
           />
-          <p className="hq-hint"><span className="live-dot" aria-hidden /> {agents.length} people in today · tap anyone at their desk to talk</p>
         </div>
         <aside className="hq-side">
           <Whiteboard
@@ -134,7 +134,7 @@ export default function App() {
                   <svg viewBox="0 0 8 10" aria-hidden shapeRendering="crispEdges"><path d="M3 0h2v1h1v4H5v1H3V5H2V1h1zM1 4h1v1h1v1h2V5h1V4h1v2H6v1H5v1h1v1H2V8h1V7H2V6H1z" fill="currentColor" /></svg>
                 </button>
               )}
-              <span className="dock-meta">{voice.listening ? 'Listening…' : status ? `${status.sources} files · salaries never shown` : ''}</span>
+              <span className="dock-meta">{voice.listening ? 'Listening…' : status ? `${status.sources} files read` : ''}</span>
               <button type="submit" className="px-btn is-go">Ask ▸</button>
             </div>
           </form>
