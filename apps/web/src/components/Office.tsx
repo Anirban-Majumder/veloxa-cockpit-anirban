@@ -90,7 +90,7 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
   const screen = agent ? `PC_FRONT_ON_${((tick + x + y) % 3) + 1}` : 'PC_FRONT_OFF'
   return (
     <>
-      <Img file="DESK_FRONT" x={x} y={y} w={48} h={32} z={y + 32} />
+      <Img file="DESK_FRONT" x={x} y={y - 3} w={48} h={32} z={y + 32} />
       <Img file={screen} x={x + 16} y={y - 5} w={16} h={32} z={y + 33} />
       <Img file="CUSHIONED_CHAIR_BACK" x={x + 16} y={y + 30} w={16} h={16} z={y + 40} />
       {agent && (
@@ -290,7 +290,7 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
           <div className="runner" style={at(16, CORRIDOR.y + 16, W - 32, 16, 1)} />
           {[64, 224, 416, 576].map((x) => <div key={x} className="ceiling-light" style={at(x - 30, CORRIDOR.y - 6, 60, 60, 2)} />)}
           {/* Lobby */}
-          <Img file="DESK_FRONT" x={LOBBY.x + 88} y={LOBBY.y + 70} w={48} h={32} />
+          <Img file="DESK_FRONT" x={LOBBY.x + 88} y={LOBBY.y + 67} w={48} h={32} />
           <Img file="PC_FRONT_OFF" x={LOBBY.x + 104} y={LOBBY.y + 65} w={16} h={32} z={LOBBY.y + 103} />
           <span className="welcome" style={at(LOBBY.x + 84, LOBBY.y + 106, 56, 10, 200)}>Welcome</span>
           <button type="button" className="board-hit" style={at(LOBBY.x + 98, LOBBY.y + 2, 36, 36, 6)} onClick={onWhiteboard} aria-label="Read the whiteboard: today’s top worries">
