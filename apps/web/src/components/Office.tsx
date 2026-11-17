@@ -192,8 +192,8 @@ function useCat(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
   }, [ref, enabled])
 }
 
-export function Office({ agents, selected, onOpen, onWhiteboard }: {
-  agents: Agent[]; selected?: string; onOpen: (a: Agent) => void; onWhiteboard: () => void
+export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
+  agents: Agent[]; selected?: string; alerts?: number; onOpen: (a: Agent) => void; onWhiteboard: () => void
 }) {
   const [tick, setTick] = useState(0)
   const [hover, setHover] = useState<string | null>(null)
@@ -221,15 +221,7 @@ export function Office({ agents, selected, onOpen, onWhiteboard }: {
   const isActive = (a?: Agent) => !!a && (a.employee_id === selected || a.employee_id === hover)
 
   return (
-    <section aria-labelledby="office-title">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 id="office-title" className="font-display text-xl font-bold">Talk to your team</h2>
-          <p className="mt-1 text-sm text-ink-soft">Walk into any room and tap someone at their desk. They answer from their own records and remember your past conversations.</p>
-        </div>
-        <p className="text-sm text-ink-soft"><span className="live-dot" aria-hidden /> {agents.length} people in today</p>
-      </div>
-      <div className="office-frame mt-4">
+    <div className="office-scroll">
         <div className="office" role="group" aria-label="Veloxa office floor plan">
           {/* Floors */}
           {ROOMS.map((r) => <Floor key={r.dept} file={r.floor} x={r.x} y={r.y + WALL} w={r.w} h={r.h - WALL} />)}
@@ -304,6 +296,7 @@ export function Office({ agents, selected, onOpen, onWhiteboard }: {
           <button type="button" className="board-hit" style={at(LOBBY.x + 98, LOBBY.y + 2, 36, 36, 6)} onClick={onWhiteboard} aria-label="Read the whiteboard: today’s top worries">
             <img className="px" src={`${ART}WHITEBOARD.png`} alt="" />
             <span className="board-tag">Worries</span>
+            {alerts > 0 && <span className="board-alert" aria-hidden>!</span>}
           </button>
           <Img file="LARGE_PLANT" x={LOBBY.x + 4} y={LOBBY.y + 104} w={32} h={48} />
           <Img file="LARGE_PLANT" x={LOBBY.x + 108} y={LOBBY.y + 104} w={32} h={48} />
@@ -346,14 +339,6 @@ export function Office({ agents, selected, onOpen, onWhiteboard }: {
           <div ref={(el) => { courier.current.el = el }} className="px sheet" style={{ backgroundImage: `url(${ART}people/courier.png)`, visibility: 'hidden' }} aria-hidden />
           <div ref={cat} className="px cat" style={{ ...at(472, 382, 16, 16, 396), backgroundImage: `url(${ART}cat.png)` }} aria-hidden />
         </div>
-      </div>
-      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-soft">
-        {Object.entries(DEPT_COLOR).map(([d, c]) => (
-          <span key={d} className="inline-flex items-center gap-1.5">
-            <i aria-hidden className="inline-block size-2.5 rounded-sm" style={{ background: c }} />{d}
-          </span>
-        ))}
-      </p>
-    </section>
+    </div>
   )
 }

@@ -47,73 +47,73 @@ export default function App() {
   }, [cutoff])
 
   const close = useCallback(() => { setOpen(null); setFooter(null) }, [])
+  const focusBoard = useCallback(() => {
+    const first = concerns[0]
+    if (first) setOpen({ kind: 'concern', concern: first })
+    else document.getElementById('board-title')?.scrollIntoView({ behavior: 'smooth' })
+  }, [concerns])
 
   return (
-    <div className="floor-tiles min-h-full pb-32">
-      <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 sm:pt-10">
-        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-          <div>
-            <p className="font-display text-lg font-bold text-route">Veloxa</p>
-            <h1 className="font-display text-4xl leading-[1.05] font-extrabold tracking-tight sm:text-6xl">{greeting()}</h1>
-          </div>
-          {status && status.releases.length > 0 && (
-            <fieldset className="flex flex-wrap items-center gap-2">
-              <legend className="sr-only">What the company knew on</legend>
-              <span className="mr-1 text-sm text-ink-soft">What we knew on</span>
-              {status.releases.map((r) => {
-                const on = r.released_at === cutoff
-                return (
-                  <label key={r.day} className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-bold ring-1 transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-route ${on ? 'bg-ink text-paper ring-ink' : 'bg-paper text-ink ring-ink/15 hover:ring-ink/40'}`}>
-                    <input type="radio" name="cutoff" className="sr-only" checked={on} onChange={() => setCutoff(r.released_at)} />
-                    {dayLabel(r.released_at)}
-                  </label>
-                )
-              })}
-            </fieldset>
-          )}
-        </header>
+    <div className="hq">
+      {/* The building's top wall doubles as the header. */}
+      <header className="hq-roof">
+        <div className="hq-brand">
+          <span className="hq-logo" aria-hidden>▚</span>
+          <span className="font-display">Veloxa <b>HQ</b></span>
+        </div>
+        <h1 className="hq-greeting font-display">{greeting()}</h1>
+        {status && status.releases.length > 0 && (
+          <fieldset className="hq-days">
+            <legend className="sr-only">What the company knew on</legend>
+            <span className="hq-days-label">Knew on</span>
+            {status.releases.map((r) => {
+              const on = r.released_at === cutoff
+              return (
+                <label key={r.day} className={`px-btn ${on ? 'is-on' : ''}`}>
+                  <input type="radio" name="cutoff" className="sr-only" checked={on} onChange={() => setCutoff(r.released_at)} />
+                  {dayLabel(r.released_at)}
+                </label>
+              )
+            })}
+          </fieldset>
+        )}
+      </header>
 
-        {error && <p role="alert" className="mt-6 rounded-xl bg-[#fbd9c9] p-4 text-alarm">{error}</p>}
+      {error && <p role="alert" className="hq-error">{error}</p>}
 
-        <main className="mt-8 space-y-10">
-          <div id="whiteboard" className="scroll-mt-6">
-          <Whiteboard
-            concerns={concerns}
-            loading={loading && !error}
-            empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day to rank them.' : undefined}
-            onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
-          />
-          </div>
+      <main className="hq-floor">
+        <div className="hq-office">
           <Office
             agents={agents}
+            alerts={concerns.length}
             selected={open?.kind === 'person' ? open.agent.employee_id : undefined}
             onOpen={(a) => setOpen({ kind: 'person', agent: a })}
-            onWhiteboard={() => document.getElementById('whiteboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            onWhiteboard={focusBoard}
           />
-        </main>
-
-        {status && (
-          <p className="mt-8 max-w-prose text-sm text-ink-soft">
-            Built from {status.sources} files and {status.evidence} records released up to {cutoff ? dayLabel(cutoff) : 'today'}. Individual salaries are never shown.
-          </p>
-        )}
-      </div>
+          <p className="hq-hint"><span className="live-dot" aria-hidden /> {agents.length} people in today · tap anyone at their desk to talk</p>
+        </div>
+        <Whiteboard
+          concerns={concerns}
+          loading={loading && !error}
+          empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day.' : undefined}
+          onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
+        />
+      </main>
 
       <form
         onSubmit={(e) => { e.preventDefault(); setOpen({ kind: 'analyst', question: quick.trim() || undefined }); setQuick('') }}
-        className="fixed inset-x-0 bottom-0 z-30 px-4 pb-4 sm:pb-6"
+        className="hq-ask"
       >
-        <div className="mx-auto flex max-w-2xl gap-2 rounded-[22px] bg-ink p-2 shadow-[0_20px_40px_-12px_rgb(38_52_59/.6)]">
-          <label htmlFor="quick-ask" className="sr-only">Ask about Veloxa</label>
-          <input
-            id="quick-ask"
-            value={quick}
-            onChange={(e) => setQuick(e.target.value)}
-            placeholder="Ask anything about Veloxa"
-            className="min-w-0 flex-1 rounded-2xl bg-transparent px-4 text-paper placeholder:text-paper/60 focus:outline-none"
-          />
-          <button type="submit" className="rounded-2xl bg-marigold px-5 py-3 font-bold text-ink hover:bg-[#ffbe1f]">Ask</button>
-        </div>
+        <label htmlFor="quick-ask" className="hq-ask-label font-display">Ask the cockpit</label>
+        <input
+          id="quick-ask"
+          value={quick}
+          onChange={(e) => setQuick(e.target.value)}
+          placeholder="Ask anything about Veloxa…"
+          className="hq-ask-input"
+        />
+        <button type="submit" className="px-btn is-go">Ask ▸</button>
+        {status && <span className="hq-ask-meta">{status.sources} files · {status.evidence} records · salaries never shown</span>}
       </form>
 
       {open?.kind === 'concern' && (
@@ -122,7 +122,8 @@ export default function App() {
         </Panel>
       )}
       {open?.kind === 'person' && cutoff && (
-        <Panel title={open.agent.full_name} subtitle={`${open.agent.title}, ${open.agent.department} · joined ${open.agent.join_date}`} onClose={close} footer={footer}>
+        <Panel title={open.agent.full_name} subtitle={`${open.agent.title}, ${open.agent.department} · joined ${open.agent.join_date}`} onClose={close} footer={footer}
+          avatar={open.agent.employee_id}>
           <Chat key={open.agent.employee_id + cutoff} agent={open.agent.employee_id} cutoff={cutoff} speaker={open.agent.full_name}
             suggestions={['What are you working on right now?', 'What’s getting in your way?']} onFooter={setFooter} />
         </Panel>

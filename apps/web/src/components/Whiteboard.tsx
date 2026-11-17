@@ -1,45 +1,52 @@
 import type { Concern } from '../lib/api'
 
-const TILTS = ['-2.2deg', '1.4deg', '-0.8deg']
-const NOTE_COLORS = ['bg-marigold', 'bg-marigold-soft', 'bg-[#ffd1b8]']
-const URGENCY = ['', 'Keep an eye on it', 'Act this week', 'Act today']
+const URGENCY = ['', 'Watch', 'This week', 'Today'] as const
+const NOTE = ['note-1', 'note-2', 'note-3']
 
-/** The CEO's three worries, pinned to the office whiteboard. */
+/** The CEO's three worries as pixel notes pinned to the office notice board, most important first. */
 export function Whiteboard({ concerns, loading, empty, onOpen }: {
   concerns: Concern[]; loading: boolean; empty?: string; onOpen: (c: Concern) => void
 }) {
+  const [top, ...rest] = concerns
   return (
-    <section aria-labelledby="board-title" className="relative rounded-[28px] border-[10px] border-[#b9c2c6] bg-white p-5 shadow-[0_2px_0_#9aa5aa,0_18px_40px_-20px_rgb(38_52_59/.5)] sm:p-8">
-      <h2 id="board-title" className="font-display text-2xl font-bold text-ink/80 sm:text-3xl">What to worry about today</h2>
-      <p className="mt-1 max-w-prose text-ink-soft">Ranked from everything the company knew on this date. Tap a note to see the evidence.</p>
-
-      {loading && <p className="mt-8 text-ink-soft">Reading the morning’s files…</p>}
-      {!loading && concerns.length === 0 && (
-        <p className="mt-8 max-w-prose rounded-xl bg-floor/60 p-4 text-ink">{empty ?? 'Nothing ranked for this date yet.'}</p>
-      )}
-
-      <ol className="mt-7 grid gap-6 md:grid-cols-3">
-        {concerns.map((c, i) => (
-          <li key={c.id} className="note" style={{ '--tilt': TILTS[i], animationDelay: `${i * 90}ms` } as React.CSSProperties}>
-            <button
-              type="button"
-              onClick={() => onOpen(c)}
-              className={`group relative flex h-full w-full flex-col rounded-sm ${NOTE_COLORS[i]} p-5 pt-7 text-left text-ink shadow-[0_10px_18px_-10px_rgb(38_52_59/.55)] transition-transform hover:-translate-y-1 hover:rotate-0`}
-            >
-              <span aria-hidden className="absolute -top-2 left-1/2 size-4 -translate-x-1/2 rounded-full bg-route shadow-[0_2px_0_#1d4ea8]" />
-              <span className="font-display text-5xl leading-none font-extrabold text-ink/25">{c.rank}</span>
-              <span className="mt-2 font-display text-xl leading-tight font-bold">{c.title}</span>
-              <span className="mt-3 text-[15px] leading-relaxed">{c.description}</span>
-              <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-5 text-sm">
-                <span className={c.urgency === 3 ? 'font-bold text-alarm' : 'font-bold'}>{URGENCY[c.urgency]}</span>
-                <span className="text-ink/70">{c.evidence.length} sources</span>
-                <span className="ml-auto text-ink/70 group-hover:underline">See why</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      <div aria-hidden className="absolute right-8 -bottom-[10px] hidden h-3 w-40 translate-y-full rounded-b-md bg-[#9aa5aa] sm:block" />
+    <section aria-labelledby="board-title" className="board">
+      <header className="board-head">
+        <h2 id="board-title" className="font-display">What to worry about</h2>
+        <span className="board-sub">{concerns.length ? `${concerns.length} pinned` : ''}</span>
+      </header>
+      <div className="board-cork">
+        {loading && <p className="board-empty">Reading the morning’s files…</p>}
+        {!loading && concerns.length === 0 && <p className="board-empty">{empty ?? 'Nothing pinned for this date yet.'}</p>}
+        {top && <Note c={top} big onOpen={onOpen} />}
+        {rest.map((c) => <Note key={c.id} c={c} onOpen={onOpen} />)}
+      </div>
+      <p className="board-foot">Tap a note to see the evidence behind it.</p>
     </section>
+  )
+
+}
+
+function Note({ c, big, onOpen }: { c: Concern; big?: boolean; onOpen: (c: Concern) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(c)}
+      className={`note-px ${NOTE[c.rank - 1] ?? 'note-3'} ${big ? 'note-big' : ''}`}
+      style={{ ['--tilt' as string]: ['-1.2deg', '0.9deg', '-0.6deg'][c.rank - 1] ?? '0deg' }}
+      aria-label={`Worry ${c.rank}: ${c.title}. Urgency: ${URGENCY[c.urgency]}. ${c.evidence.length} sources.`}
+    >
+      <span className="pin" aria-hidden />
+      <span className="note-top">
+        <span className="note-rank font-display">#{c.rank}</span>
+        <span className={`urgency u${c.urgency}`}>{URGENCY[c.urgency]}</span>
+      </span>
+      <span className="note-title font-display">{c.title}</span>
+      {big && <span className="note-desc">{c.description}</span>}
+      <span className="note-meta">
+        <span className="meter" aria-hidden>{[1, 2, 3].map((n) => <i key={n} className={n <= c.impact ? 'on' : ''} />)}</span>
+        <span>{c.evidence.length} source{c.evidence.length === 1 ? '' : 's'}</span>
+        <span className="see">See why ▸</span>
+      </span>
+    </button>
   )
 }
