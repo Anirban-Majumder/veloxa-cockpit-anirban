@@ -213,3 +213,11 @@ Status: confirmed by the owner on 16 November 2026; implementation pending.
 One root test command runs deterministic checks for ingestion, filtering, per-agent memory and scoring, plus at least 25 questions through the real chat pipeline with the configured hosted model. At least five questions exercise refusal or uncertainty. Check expected facts, source references and uncertainty instead of exact generated wording. Live tests require an API key and network access, may incur costs and may vary with model output. Test fixtures must isolate conversation history and knowledge cutoffs so earlier runs do not contaminate results. No tests have been implemented or run.
 
 For future decisions record the date, status, alternatives, rationale, consequences, and revision history. Source-trust judgments belong in `TRANSCRIPT_NOTES.md` and require the project owner’s reasoning.
+
+### D031 — Ingest each day's release at 10:00 AM IST
+
+Status: confirmed by the owner on 17 November 2026.
+
+Ingest each day folder as soon as it is released: 10:00 AM IST on its date, per the hackathon email's timeline ("Treat as released at 10:00 AM"). Day 1 is ingested on Mon 16 Nov, Day 2 on Tue 17 Nov, Day 3 on Wed 18 Nov and Day 4 on Thu 19 Nov, each with `bun run ingest <day>`. Top concerns are regenerated at that point for the new knowledge cutoff. All folders arrived together in one zip, but a day's material is not ingested or used before its release time.
+
+Consequences: each day's voice-note response and top three use only material released up to that day (for example, T6a on Day 2 uses Day 1 + Day 2). Earlier cutoffs stay queryable, and later material must not leak into them (D015). By submission, all four days are ingested, as the email requires.
