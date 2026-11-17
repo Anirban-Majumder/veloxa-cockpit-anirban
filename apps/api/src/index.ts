@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { openDb } from "../../../src/db/client";
 import { releasedCutoffs } from "../../../src/retrieval/evidence";
 import { concernCutoffs, concernsAt } from "../../../src/concerns/queries";
+import { ask, history } from "../../../src/ai/chat";
 
 const app = new Hono();
 
@@ -37,6 +38,32 @@ app.get("/api/agents", async (c) => {
   const db = await openDb();
   return c.json(await (await db.prepare(
     "SELECT employee_id, full_name, department, title, manager_id, join_date, location FROM agents ORDER BY employee_id")).all());
+});
+
+async function defaultCutoff(): Promise<string> {
+  const r = await releasedCutoffs(await openDb());
+  return r.at(-1)?.released_at ?? new Date().toISOString();
+}
+
+/** Conversation history for the analyst (agent "analyst") or a person agent, filtered by cutoff. */
+app.get("/api/chat/:agent", async (c) => {
+  const agent = c.req.param("agent");
+  const cutoff = c.req.query("cutoff") ?? (await defaultCutoff());
+  return c.json(await history(await openDb(), agent === "analyst" ? null : agent, cutoff));
+});
+
+app.post("/api/chat/:agent", async (c) => {
+  const agent = c.req.param("agent");
+  const body = await c.req.json<{ message?: string; cutoff?: string }>();
+  const message = body.message?.trim();
+  if (!message) return c.json({ error: "Type a question first." }, 400);
+  if (message.length > 2000) return c.json({ error: "Keep questions under 2,000 characters." }, 400);
+  const cutoff = body.cutoff ?? (await defaultCutoff());
+  try {
+    return c.json(await ask(await openDb(), agent === "analyst" ? null : agent, message, cutoff));
+  } catch (e) {
+    return c.json({ error: `The model could not answer: ${(e as Error).message}` }, 502);
+  }
 });
 
 const port = Number(process.env.PORT ?? 8787);
