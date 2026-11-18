@@ -1,10 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { openDb, type Db } from "../src/db/client";
-import { discoverReleases } from "../src/ingestion/releases";
+import { discoverReleases, isReleased } from "../src/ingestion/releases";
 import { ingestRelease } from "../src/ingestion/ingest";
 import { evidenceAtCutoff } from "../src/retrieval/evidence";
-import { buildEvidencePack } from "../src/concerns/context";
-import { capScores, rankConcerns, scoreConcern } from "../src/concerns/generate";
+import { matches, searchEvidence } from "../src/retrieval/search";
+import { buildEvidencePack } from "../src/concerns/evidence-pack";
+import { capScores, rankConcerns, scoreConcern } from "../src/concerns/scoring";
 
 const releases = discoverReleases();
 const day = (n: number) => releases.find((r) => r.day === n)!;
@@ -20,6 +21,13 @@ describe("release discovery", () => {
   test("day folders map to 10:00 IST release times", () => {
     expect(day(1).releasedAt).toBe("2026-11-16T10:00:00+05:30");
     expect(day(2).releasedAt).toBe("2026-11-17T10:00:00+05:30");
+  });
+});
+
+describe("database", () => {
+  test("foreign keys are enforced", async () => {
+    expect(await (await db.prepare("PRAGMA foreign_keys")).get()).toEqual({ foreign_keys: 1 });
+    await expect(db.exec("INSERT INTO evidence(source_id, locator_json, text) VALUES (999999, '{}', 'orphan')")).rejects.toThrow(/FOREIGN KEY/);
   });
 });
 
@@ -96,5 +104,23 @@ describe("evidence-strength guards", () => {
   test("corroborated needs two distinct files", () => {
     expect(capScores({ ...base, evidence: [{ id: 1 }, { id: 2 }] }, byId).evidence_strength).toBe(2);
     expect(capScores({ ...base, evidence: [{ id: 1 }, { id: 3 }] }, byId).evidence_strength).toBe(3);
+  });
+});
+
+describe("release gating", () => {
+  test("a day counts only from its 10:00 IST release", () => {
+    const release = "2026-11-19T10:00:00+05:30";
+    expect(isReleased(release, Date.parse("2026-11-19T09:59:00+05:30"))).toBe(false);
+    expect(isReleased(release, Date.parse("2026-11-19T10:00:00+05:30"))).toBe(true);
+  });
+});
+
+describe("search", () => {
+  test("word forms and misheard names still match", async () => {
+    expect(matches("resigned", "resignation")).toBe(true);
+    expect(matches("resign", "resignation")).toBe(true);
+    expect(matches("hire", "hiring")).toBe(false);
+    const kartik = await searchEvidence(db, "Karthik", day(1).releasedAt, { limit: 40 });
+    expect(kartik.some((r) => r.source_kind === "transcript" && /kartik/i.test(r.text))).toBe(true);
   });
 });

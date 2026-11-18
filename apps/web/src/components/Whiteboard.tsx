@@ -32,7 +32,7 @@ function Note({ c, big, onOpen }: { c: Concern; big?: boolean; onOpen: (c: Conce
       onClick={() => onOpen(c)}
       className={`note-px ${NOTE[c.rank - 1] ?? 'note-3'} ${big ? 'note-big' : ''}`}
       style={{ ['--tilt' as string]: ['-1.2deg', '0.9deg', '-0.6deg'][c.rank - 1] ?? '0deg' }}
-      aria-label={`Worry ${c.rank}: ${c.title}. Urgency: ${URGENCY[c.urgency]}. ${c.evidence.length} sources.`}
+      aria-label={`Worry ${c.rank}: ${c.title}. Urgency: ${URGENCY[c.urgency]}. ${c.evidence.length} citations.`}
     >
       <span className="pin" aria-hidden />
       <span className="note-top">
@@ -42,7 +42,7 @@ function Note({ c, big, onOpen }: { c: Concern; big?: boolean; onOpen: (c: Conce
       <span className="note-title">{c.title}</span>
       <span className="note-meta">
         <span className="meter" aria-hidden>{[1, 2, 3].map((n) => <i key={n} className={n <= c.impact ? 'on' : ''} />)}</span>
-        <span>{c.evidence.length} source{c.evidence.length === 1 ? '' : 's'}</span>
+        <span>{c.evidence.length} citation{c.evidence.length === 1 ? '' : 's'}</span>
         <span className="see">See why ▸</span>
       </span>
     </button>

@@ -35,8 +35,9 @@ const PERSON_HEADER = /\b(emp(loyee)? ?id|name|employee)\b/i;
 
 /** Individual pay rows are restricted from the CEO (A002); totals are allowed. */
 function tableRestriction(headers: string[]): Record<string, unknown> | undefined {
-  const pay = headers.some((h) => SALARY_HEADER.test(h));
-  const person = headers.some((h) => PERSON_HEADER.test(h));
+  const words = headers.map((h) => h.replace(/[_-]+/g, " "));
+  const pay = words.some((h) => SALARY_HEADER.test(h));
+  const person = words.some((h) => PERSON_HEADER.test(h));
   return pay && person ? { restricted: "individual_salary" } : undefined;
 }
 

@@ -231,3 +231,17 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 
 
 
+
+.search-step { display: inline-flex; align-items: center; gap: 8px; text-align: left; padding: 6px 12px; font-size: 14px; border-radius: 999px; background: var(--color-route-soft); color: var(--color-route); }
+.search-step.is-done { cursor: pointer; transition: background .15s; }
+.search-step.is-done:hover { background: #c9d9f8; }
+.search-step.is-error { background: #fbd9c9; color: var(--color-alarm); }
+.search-step.is-running { animation: glow 1.4s ease-in-out infinite; }
+.search-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+.search-caret { font-size: 11px; }
+@keyframes spin { to { transform: rotate(360deg) } }
+
+.cite-chip { display: inline-block; margin: 0 2px; padding: 0 6px; font-size: 11px; font-weight: 700; line-height: 18px; vertical-align: 2px; border-radius: 999px; border: 1px solid #0002; background: var(--color-paper); color: var(--color-ink-soft); cursor: pointer; }
+.cite-chip:hover, .cite-chip.is-open { border-color: var(--color-route); color: var(--color-route); }
+
+.stream-caret { display: inline-block; width: 7px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--color-ink-soft); animation: dots 1s infinite; }

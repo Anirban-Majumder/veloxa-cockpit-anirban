@@ -1,15 +1,25 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-/**
- * Configurable hosted model via an OpenAI-compatible endpoint (D010). Never falls back silently (D011).
- * LLM_API_KEY is optional: it is sent only when set (some gateways allow keyless access).
- */
-export function getModel() {
+export function modelSettings() {
   const baseURL = process.env.LLM_BASE_URL;
   const modelId = process.env.LLM_MODEL;
-  if (!baseURL || !modelId) {
-    throw new Error("Model not configured: set LLM_BASE_URL and LLM_MODEL in .env (LLM_API_KEY optional)");
-  }
-  const provider = createOpenAICompatible({ name: "llm", baseURL, apiKey: process.env.LLM_API_KEY || undefined });
-  return { model: provider(modelId), modelId };
+  if (!baseURL || !modelId) return undefined;
+  return {
+    baseURL,
+    modelId,
+    apiKey: process.env.LLM_API_KEY || undefined,
+    nativeJsonSchema: process.env.LLM_JSON_SCHEMA !== "false",
+  };
+}
+
+export function getModel() {
+  const settings = modelSettings();
+  if (!settings) throw new Error("Model not configured: set LLM_BASE_URL and LLM_MODEL in .env (LLM_API_KEY is optional).");
+  const provider = createOpenAICompatible({
+    name: "llm",
+    baseURL: settings.baseURL,
+    apiKey: settings.apiKey,
+    supportsStructuredOutputs: settings.nativeJsonSchema,
+  });
+  return { model: provider(settings.modelId), modelId: settings.modelId, nativeJsonSchema: settings.nativeJsonSchema };
 }

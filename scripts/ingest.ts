@@ -1,55 +1,98 @@
 /**
  * Usage:
- *   bun run ingest            ingest every day folder found
+ *   bun run ingest            ingest every released day
  *   bun run ingest 2          ingest Day1 + Day2 (cumulative)
  * Flags:
  *   --no-concerns            skip top-concern generation
  *   --regen-concerns         regenerate concerns even if nothing changed
+ *
+ * Only one process may open the database. If the API is running on this same database and release folder,
+ * it does the work; otherwise this script does.
  */
-import { openDb, DB_PATH } from "../src/db/client";
-import { discoverReleases, RELEASE_ROOT } from "../src/ingestion/releases";
-import { ingestRelease } from "../src/ingestion/ingest";
-import { generateConcerns } from "../src/concerns/generate";
+import { DB_PATH, openDb } from "../src/db/client";
+import { RELEASE_ROOT } from "../src/ingestion/releases";
+import { runIngest, type IngestOptions } from "../src/ingestion/run";
 
-const args = process.argv.slice(2);
-const flags = new Set(args.filter((a) => a.startsWith("--")));
-const positional = args.filter((a) => !a.startsWith("--"));
-if (positional.length > 1 || (positional[0] && !/^\d+$/.test(positional[0]))) {
-  console.error("Usage: bun run ingest [day] [--no-concerns] [--regen-concerns]");
-  process.exit(2);
+const API = process.env.VELOXA_API ?? `http://127.0.0.1:${process.env.PORT ?? 8787}`;
+
+interface Job { id: string; status: "running" | "done" | "failed"; log: string[]; error?: string; result?: { concerns: { status: string } } }
+type ApiReply = { status: number; body: { job?: Job; error?: string } };
+
+const options = parseArgs(process.argv.slice(2));
+const api = await runningApi();
+const ok = api?.database !== DB_PATH ? await ingestHere(options) : await ingestThroughApi(api, options);
+process.exit(ok ? 0 : 1);
+
+function parseArgs(args: string[]): IngestOptions {
+  const flags = new Set(args.filter((a) => a.startsWith("--")));
+  const positional = args.filter((a) => !a.startsWith("--"));
+  const unknown = [...flags].filter((f) => f !== "--no-concerns" && f !== "--regen-concerns");
+  if (unknown.length || positional.length > 1 || (positional[0] && !/^[1-9]\d*$/.test(positional[0]))) {
+    console.error("Usage: bun run ingest [day] [--no-concerns] [--regen-concerns]");
+    process.exit(2);
+  }
+  return {
+    day: positional[0] ? Number(positional[0]) : undefined,
+    concerns: !flags.has("--no-concerns"),
+    regen: flags.has("--regen-concerns"),
+  };
 }
 
-const releases = discoverReleases();
-if (!releases.length) { console.error(`No DayN_* folders found in ${RELEASE_ROOT}`); process.exit(1); }
-const upTo = positional[0] ? Number(positional[0]) : Math.max(...releases.map((r) => r.day));
-const selected = releases.filter((r) => r.day <= upTo);
-if (!selected.some((r) => r.day === upTo)) { console.error(`Day ${upTo} not found in ${RELEASE_ROOT}`); process.exit(1); }
+interface ApiStatus { database?: string; releaseRoot?: string }
 
-const db = await openDb();
-console.log(`Database: ${DB_PATH}\nReleases: ${RELEASE_ROOT}\n`);
-let changed = 0;
-for (const r of selected) {
-  const res = await ingestRelease(db, r);
-  changed += res.added;
-  console.log(`Day ${r.day} (${r.folder}): ${res.added} new file(s), ${res.evidence} evidence rows, ${res.unchanged} unchanged` +
-    (res.skipped.length ? `, skipped unsupported: ${res.skipped.join(", ")}` : ""));
+function runningApi(): Promise<ApiStatus | undefined> {
+  return fetch(`${API}/api/status`).then((res) => res.json() as Promise<ApiStatus>, () => undefined);
 }
-const agents = (await (await db.prepare("SELECT COUNT(*) AS n FROM agents")).get()) as { n: number };
-console.log(`Agents: ${agents.n} profile(s)`);
 
-const cutoff = selected.at(-1)!.releasedAt;
-if (flags.has("--no-concerns")) process.exit(0);
-const existing = (await (await db.prepare("SELECT COUNT(*) AS n FROM concerns WHERE knowledge_cutoff = ?")).get(cutoff)) as { n: number };
-if (!changed && existing.n && !flags.has("--regen-concerns")) {
-  console.log(`\nConcerns for ${cutoff} are up to date (use --regen-concerns to refresh).`);
-  process.exit(0);
+async function ingestHere(opts: IngestOptions): Promise<boolean> {
+  try {
+    const result = await runIngest(await openDb(), opts, (line) => console.log(line));
+    return result.concerns.status !== "failed";
+  } catch (error) {
+    console.error((error as Error).message);
+    return false;
+  }
 }
-console.log(`\nGenerating top concerns as of ${cutoff}…`);
-try {
-  const g = await generateConcerns(db, cutoff);
-  console.log(`Stored ${g.stored} ranked concerns${g.droppedCitations ? ` (dropped ${g.droppedCitations} invalid citation(s))` : ""}. Top 3:`);
-  g.top.forEach((c, i) => console.log(`  ${i + 1}. [${c.score}] ${c.title}`));
-} catch (e) {
-  console.error(`Concern generation failed: ${(e as Error).message}\nEvidence was ingested; rerun with --regen-concerns once the model is reachable.`);
-  process.exit(1);
+
+async function ingestThroughApi(api: ApiStatus, opts: IngestOptions): Promise<boolean> {
+  if (api.releaseRoot !== RELEASE_ROOT) {
+    console.error(`The running API owns ${DB_PATH} but reads releases from ${api.releaseRoot}. Stop it, or use the same VELOXA_RELEASE_DIR.`);
+    return false;
+  }
+  console.log(`Using the running API at ${API} (its model settings apply).`);
+  const start = await call("/api/ingest", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(opts),
+  });
+  if (start.status !== 202) {
+    const running = start.status === 409 && start.body.job ? ` (job ${start.body.job.id}); wait for it to finish and run this again` : "";
+    console.error(`${start.body.error ?? `API returned ${start.status}`}${running}`);
+    return false;
+  }
+
+  let job = start.body.job!;
+  let printed = 0;
+  for (;;) {
+    for (; printed < job.log.length; printed++) console.log(job.log[printed]);
+    if (job.status !== "running") break;
+    await Bun.sleep(1000);
+    const poll = await call("/api/ingest");
+    if (poll.body.job?.id !== job.id) {
+      console.error("The ingest job disappeared (API restarted?).");
+      return false;
+    }
+    job = poll.body.job;
+  }
+  if (job.status === "failed") console.error(`Ingest failed: ${job.error}`);
+  return job.status === "done" && job.result?.concerns.status !== "failed";
+}
+
+async function call(path: string, init?: RequestInit): Promise<ApiReply> {
+  try {
+    const res = await fetch(API + path, init);
+    return { status: res.status, body: (await res.json().catch(() => ({}))) as ApiReply["body"] };
+  } catch {
+    return { status: 0, body: { error: `Lost contact with the API at ${API}.` } };
+  }
 }

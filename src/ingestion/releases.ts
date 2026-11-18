@@ -26,6 +26,9 @@ export function discoverReleases(root = RELEASE_ROOT): Release[] {
   return out.sort((a, b) => a.day - b.day);
 }
 
+/** A day's pack exists upfront but counts only from its release time. */
+export const isReleased = (releasedAt: string, now = Date.now()) => Date.parse(releasedAt) <= now;
+
 /** Only these subfolders are product inputs; brief/ and data_room/templates/ are not company evidence. */
 export const INPUT_DIRS = ["data_room", "transcripts"] as const;
 export const SKIP_DIRS = new Set(["templates"]);

@@ -5,23 +5,15 @@ const MAX_TABLE_ROWS = 40;
 
 /** Builds the cutoff-filtered evidence pack given to the model. Restricted rows are excluded; large tables are summarised. */
 export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack: string; ids: Set<number> }> {
-  // Restricted rows (individual pay) are excluded entirely. No derived payroll totals are emitted:
-  // month-over-month totals let one joiner's pay be recovered by subtraction (A002).
+  // No derived payroll totals are emitted: month-over-month totals let one joiner's pay be recovered by subtraction (A002).
   const visible = await evidenceAtCutoff(db, cutoff);
   const ids = new Set(visible.map((r) => r.id));
 
-  const groups = new Map<string, EvidenceRow[]>();
-  for (const r of visible) {
-    const sheet = (JSON.parse(r.locator_json) as { sheet?: string }).sheet;
-    const key = `${r.path}${sheet ? ` [${sheet}]` : ""}`;
-    groups.set(key, [...(groups.get(key) ?? []), r]);
-  }
-
   const parts: string[] = [];
-  for (const [key, rows] of groups) {
-    const r0 = rows[0]!;
-    parts.push(`\n### ${key} (${r0.source_kind}, released ${r0.released_at.slice(0, 10)})`);
-    const tableRows = rows.filter((r) => r.data_json && !r.path.endsWith(".eml"));
+  for (const [key, rows] of groupBySource(visible)) {
+    const first = rows[0]!;
+    parts.push(`\n### ${key} (${first.source_kind}, released ${first.released_at.slice(0, 10)})`);
+    const tableRows = tableRowsOf(rows);
     if (tableRows.length > MAX_TABLE_ROWS) {
       for (const r of rows.filter((r) => !r.data_json)) parts.push(`[E${r.id}] ${r.text}`);
       parts.push(summariseTable(tableRows));
@@ -32,6 +24,28 @@ export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack:
 
   return { pack: parts.join("\n"), ids };
 }
+
+/** Tables too large to read row by row, keyed like "path [sheet]", each with its deterministic summary. */
+export async function largeTableSummaries(db: Db, cutoff: string): Promise<Map<string, string>> {
+  const summaries = new Map<string, string>();
+  for (const [key, rows] of groupBySource(await evidenceAtCutoff(db, cutoff))) {
+    const tableRows = tableRowsOf(rows);
+    if (tableRows.length > MAX_TABLE_ROWS) summaries.set(key, summariseTable(tableRows));
+  }
+  return summaries;
+}
+
+function groupBySource(rows: EvidenceRow[]): Map<string, EvidenceRow[]> {
+  const groups = new Map<string, EvidenceRow[]>();
+  for (const r of rows) {
+    const sheet = (JSON.parse(r.locator_json) as { sheet?: string }).sheet;
+    const key = `${r.path}${sheet ? ` [${sheet}]` : ""}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  return groups;
+}
+
+const tableRowsOf = (rows: EvidenceRow[]) => rows.filter((r) => r.data_json && !r.path.endsWith(".eml"));
 
 /** Generic deterministic summary for a large table; rows stay citable via their ID range. */
 function summariseTable(rows: EvidenceRow[]): string {

@@ -7,6 +7,7 @@ export default defineConfig({
   root: import.meta.dirname,
   plugins: [react(), tailwindcss()],
   server: {
-    proxy: { '/api': `http://localhost:${process.env.PORT ?? 8787}` },
+    host: '127.0.0.1',
+    proxy: { '/api': `http://127.0.0.1:${process.env.PORT ?? 8787}` },
   },
 })

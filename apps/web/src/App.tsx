@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, dayLabel, type Agent, type Concern, type Status } from './lib/api'
 import { Whiteboard } from './components/Whiteboard'
 import { ConcernDetail } from './components/ConcernDetail'
 import { Office } from './components/Office'
 import { Panel } from './components/Panel'
-import { Chat } from './components/Chat'
+import { Chat } from './components/chat/Chat'
 import { useDictation } from './lib/dictation'
 
 type Open =
   | { kind: 'concern'; concern: Concern }
   | { kind: 'person'; agent: Agent }
-  | { kind: 'analyst'; question?: string }
+  | { kind: 'analyst'; question?: { text: string; cutoff: string } }
   | null
 
 const SUGGESTIONS = [
@@ -28,14 +28,13 @@ export default function App() {
   const [status, setStatus] = useState<Status | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [cutoff, setCutoff] = useState<string | null>(null)
-  const [concerns, setConcerns] = useState<Concern[]>([])
-  const [loading, setLoading] = useState(true)
+  const [board, setBoard] = useState<{ cutoff: string; concerns: Concern[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Open>(null)
   const [footer, setFooter] = useState<ReactNode>(null)
   const [ask, setAsk] = useState('')
-  /** Analyst conversation number for this page visit; bumping it starts a fresh conversation. */
-  const [session, setSession] = useState(0)
+  /** The analyst chat lasts one page visit: each visit (and each Clear) gets its own conversation. */
+  const [analystConversation, setAnalystConversation] = useState<number | null>(null)
   const voice = useDictation(setAsk)
 
   useEffect(() => {
@@ -46,22 +45,48 @@ export default function App() {
 
   useEffect(() => {
     if (!cutoff) return
-    setLoading(true)
-    api.concerns(cutoff).then((d) => setConcerns(d.concerns)).catch((e) => setError(e.message)).finally(() => setLoading(false))
+    let current = true
+    api.concerns(cutoff)
+      .then((d) => current && setBoard({ cutoff, concerns: d.concerns }))
+      .catch((e: Error) => current && setError(e.message))
+    return () => { current = false }
   }, [cutoff])
+
+  const loading = !!cutoff && board?.cutoff !== cutoff
+  const concerns = useMemo(() => (board?.cutoff === cutoff ? board.concerns : []), [board, cutoff])
+
+  const chooseDay = (releasedAt: string) => {
+    setCutoff(releasedAt)
+    setOpen((o) => (o?.kind === 'concern' ? null : o?.kind === 'analyst' ? { kind: 'analyst' } : o))
+  }
 
   const close = useCallback(() => { setOpen(null); setFooter(null) }, [])
 
-  /** Each page visit (and each Clear) starts a new analyst conversation on the server. */
-  const startSession = async () => { await api.newChat('analyst').catch(() => {}); setSession((n) => n + 1) }
+  const startAnalystConversation = async () => {
+    try {
+      setAnalystConversation(await api.newConversation('analyst'))
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      return false
+    }
+  }
   const askAnalyst = async (question?: string) => {
     voice.stop()
-    if (session === 0) await startSession()
+    if (!cutoff) {
+      setError('Nothing has been ingested yet. Run `bun run ingest`, then reload.')
+      return
+    }
+    if (analystConversation === null && !(await startAnalystConversation())) return
     setFooter(null)
-    setOpen({ kind: 'analyst', question })
+    setOpen({ kind: 'analyst', question: question && cutoff ? { text: question, cutoff } : undefined })
     setAsk('')
   }
-  const clearChat = async () => { setFooter(null); await startSession(); setOpen({ kind: 'analyst' }) }
+  const clearChat = async () => {
+    if (!(await startAnalystConversation())) return
+    setFooter(null)
+    setOpen({ kind: 'analyst' })
+  }
   const focusBoard = useCallback(() => {
     const first = concerns[0]
     if (first) setOpen({ kind: 'concern', concern: first })
@@ -86,7 +111,7 @@ export default function App() {
               const on = r.released_at === cutoff
               return (
                 <label key={r.day} className={`px-btn ${on ? 'is-on' : ''}`}>
-                  <input type="radio" name="cutoff" className="sr-only" checked={on} onChange={() => setCutoff(r.released_at)} />
+                  <input type="radio" name="cutoff" className="sr-only" checked={on} onChange={() => chooseDay(r.released_at)} />
                   {dayLabel(r.released_at)}
                 </label>
               )
@@ -153,11 +178,11 @@ export default function App() {
             suggestions={['What are you working on right now?', 'What’s getting in your way?']} onFooter={setFooter} />
         </Panel>
       )}
-      {open?.kind === 'analyst' && cutoff && (
+      {open?.kind === 'analyst' && cutoff && analystConversation !== null && (
         <Panel title="Ask about Veloxa" subtitle={`Using what we knew on ${dayLabel(cutoff)}`} onClose={close} footer={footer}
           actions={<button type="button" className="px-btn" onClick={() => void clearChat()}>Clear chat</button>}>
-          <Chat key={`analyst-${session}-${cutoff}`} agent="analyst" cutoff={cutoff} speaker="Cockpit" fresh
-            suggestions={SUGGESTIONS} initial={open.question} onFooter={setFooter} />
+          <Chat key={`analyst-${analystConversation}-${cutoff}`} agent="analyst" cutoff={cutoff} conversation={analystConversation} speaker="Cockpit"
+            suggestions={SUGGESTIONS} initialQuestion={open.question?.cutoff === cutoff ? open.question.text : undefined} onFooter={setFooter} />
         </Panel>
       )}
     </div>

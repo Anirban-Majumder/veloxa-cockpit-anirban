@@ -4,32 +4,41 @@ A hackathon prototype for answering company questions from structured records an
 
 ## Status — 16 November 2026
 
-The React/Vite/Tailwind frontend starter is implemented and verified. Ingestion, the database schema, the API and the Day 2 top-three-concerns page are implemented. Person/analyst chat and the 25-question answer suite are not yet implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
+Ingestion, the database, the API, the Day 2 top-three concerns, the pixel-office UI and streaming analyst/person chat are implemented. The 25-question answer suite is not yet implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
 
 ## Run and test
 
-The current frontend starter needs Bun 1.4.4. Install stable Bun using the [official installation instructions](https://bun.sh/docs/installation), or update an existing installation with `bun upgrade --stable`.
-
-From the repository root:
+Needs Bun 1.4.4 ([install](https://bun.sh/docs/installation)) and the release pack at `Veloxa_Hackathon_Release_Packs/` (or set `VELOXA_RELEASE_DIR`).
 
 ```sh
 bun install --frozen-lockfile
-bun run dev
+cp .env.example .env    # set LLM_BASE_URL and LLM_MODEL (LLM_API_KEY is optional)
+bun run dev             # API on :8787 + UI on http://localhost:5173
+bun run ingest          # works with or without the dev server running
 ```
-
-Open the URL printed by Vite (normally `http://localhost:5173`). The starter displays a hello-world page with a working counter and Tailwind styling.
 
 ```sh
-bun run build      # TypeScript check and production bundle
-bun run lint       # Starter lint checks
-bun run preview    # Serve the production bundle after building
+bun run start           # production: builds the UI and serves it from the API on :8787
+bun run typecheck
+bun run lint
+bun test tests
 ```
 
-The single root package owns dependencies; the UI lives in `apps/web`. Installed stable versions are Bun 1.4.4, React 19.3.1, Vite 8.3.8 and Tailwind CSS 4.3.5. The committed Bun lockfile records exact dependency resolutions.
+The embedded database allows one process at a time. When the API is running, `bun run ingest` asks it to do the work; otherwise the script ingests directly. Days count only from 10:00 IST on their release date.
 
-Setup follows the official [Bun/Vite guide](https://bun.sh/docs/guides/ecosystem/vite), [Vite React TypeScript template](https://vite.dev/guide/) and [Tailwind Vite installation](https://tailwindcss.com/docs/installation/using-vite). Tailwind uses `@tailwindcss/vite` and `@import "tailwindcss"`; no legacy Tailwind init command is required.
+## Code layout
 
-The final full-app setup/run command and answer-test command remain pending. Full setup will require the original release pack at a documented local path and a hosted-model API key supplied through environment variables. One test command will run deterministic checks and at least 25 questions through the live model-backed chat pipeline, including at least five uncertainty or refusal cases.
+```
+apps/api/src/index.ts       Hono app: routes, error handler, static UI in production
+apps/api/src/routes/        one file per resource: chat, concerns, agents, ingest, status
+apps/web/src/components/chat/  streaming chat UI (search steps, citations, confidence)
+src/ai/                     model setup and generateStructured (AI SDK Output.object)
+src/chat/                   chat agent: prompt (config.ts), search tool, history
+src/concerns/               top-concern prompt + schema (config.ts), scoring, generation, storage
+src/ingestion/              release discovery, parsers, ingest job
+src/retrieval/              cutoff-filtered evidence and keyword search
+src/db/                     schema, connection and query helpers
+```
 
 ## Materials and schedule
 
@@ -54,17 +63,21 @@ All packs arrived upfront. Treat each day’s sources as available from 10:00 AM
 
 Copy `.env.example` to `.env` and set `LLM_BASE_URL` and `LLM_MODEL` (any OpenAI-compatible endpoint; `LLM_API_KEY` is optional and only sent when set). Put the release pack at `Veloxa_Hackathon_Release_Packs/` or set `VELOXA_RELEASE_DIR`.
 
+If the API is running on the same database and release folder, `bun run ingest` posts the job to it and prints its progress (the API's model settings apply). With a different database it ingests locally; with the same database but a different release folder it stops and says so. The same job is available as `POST /api/ingest` (body `{day?, concerns?, regen?}`) with progress at `GET /api/ingest`.
+
 ```sh
-bun run ingest        # ingest all DayN_* folders, then generate top concerns at the latest cutoff
+bun run ingest        # ingest every released day (from 10:00 IST on its date), then generate top concerns
 bun run ingest 2      # ingest Day 1 + Day 2 only (cumulative); concerns as of Day 2 10:00 IST
 bun run ingest 2 --no-concerns      # evidence only
 bun run ingest 2 --regen-concerns   # force concern regeneration
-bun run dev           # API (port 8787) + UI (http://localhost:5173)
-bun test tests        # deterministic ingestion, cutoff, privacy and scoring tests
 ```
 
 - Each `DayN_Ddd_DDMon` folder is treated as released at 10:00 IST on that date. Only `data_room/` and `transcripts/` are ingested; `data_room/templates/` and `brief/` are skipped.
 - Re-running is idempotent (`(path, sha256)` per source); a changed file becomes a new source version and the latest version at a cutoff wins.
 - Spreadsheet/CSV rows keep structured fields in `evidence.data_json`; documents are split by paragraph/page; emails are one row each.
-- Individual payroll rows are tagged `restricted: individual_salary` and never reach the CEO view or the model; only monthly totals over at least 5 employees are passed.
+- Individual payroll rows are tagged `restricted: individual_salary` and never reach the CEO view or the model. In any other passage that mentions pay, amounts are masked; company-wide monthly payroll lines in the GL are kept, since A002 allows totals.
 - Concerns: the model proposes candidates with 1–3 factor scores, reasons, uncertainty and evidence IDs; the backend drops unknown citations, computes `2 × impact + urgency + evidence strength`, ranks (ties by urgency, then impact) and stores them per knowledge cutoff. The home page shows the top three with expandable evidence.
+
+## Chat
+
+Chat streams through the AI SDK (`ToolLoopAgent`, `useChat`). Tools: `search_evidence` (both the analyst and people) and, for the analyst, `summarize_table`, which returns counts and per-month trends of large tables, cited as `[T1]`. Pure small talk is answered directly; anything else must search first. The knowledge cutoff, the person's scope and the salary filter are applied inside the tool from the request, never taken from the model. Answers cite records inline as `[E12]`, end with a confidence line, and the UI shows each search step, its results and the cited passages. `GET /api/chat?agent=&cutoff=` returns history, `POST /api/chat` streams a reply, `DELETE /api/chat?agent=` starts a fresh conversation.

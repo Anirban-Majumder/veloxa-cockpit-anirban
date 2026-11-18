@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun scripts/dev.ts",
-    "start": "bun scripts/dev.ts",
+    "start": "bun run build && NODE_ENV=production bun apps/api/src/index.ts",
     "build": "tsc -b apps/web/tsconfig.json && bun --bun vite build --config apps/web/vite.config.ts",
     "typecheck": "tsc -b apps/web/tsconfig.json && tsc -p tsconfig.server.json",
     "lint": "oxlint apps/web/src apps/web/vite.config.ts apps/api/src src scripts",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.92",
+    "@ai-sdk/react": "4.0.180",
     "@tursodatabase/database": "^0.8.3",
     "ai": "^7.0.173",
     "exceljs": "^4.4.0",

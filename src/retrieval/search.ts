@@ -8,6 +8,11 @@ export const tokenize = (s: string) =>
 
 /** Transcript spellings recorded in ASSUMPTIONS.md A005. */
 const EXTRA_ALIASES: Record<string, string[]> = { VX007: ["pria"], VX010: ["kartik"], VX014: ["fatima shaikh"] };
+const MISHEARD: Record<string, string[]> = { priya: ["pria"], karthik: ["kartik"], sheikh: ["shaikh"] };
+
+/** "resignation" also finds "resigned"; short words must match exactly. */
+const stem = (term: string) => (term.length >= 7 ? term.slice(0, 6) : term.length > 4 ? term.slice(0, -1) : term);
+export const matches = (token: string, term: string) => token === term || (term.length > 4 && token.startsWith(stem(term)));
 
 export interface AgentIdentity { employee_id: string; full_name: string; work_email: string | null }
 
@@ -38,7 +43,8 @@ export async function searchEvidence(db: Db, query: string, cutoff: string, opts
     const initials = opts.agent.full_name.split(" ").map((p) => p[0]).join("").toUpperCase();
     rows = rows.filter((r) => mentions(r, aliases, initials));
   }
-  const q = [...new Set(tokenize(query))];
+  const asked = tokenize(query);
+  const q = [...new Set([...asked, ...asked.flatMap((t) => MISHEARD[t] ?? [])])];
   const docs = rows.map((r) => ({ r, toks: tokenize(`${r.path} ${r.text}`) }));
   const df = new Map<string, number>();
   for (const d of docs) for (const t of new Set(d.toks)) df.set(t, (df.get(t) ?? 0) + 1);
@@ -46,7 +52,7 @@ export async function searchEvidence(db: Db, query: string, cutoff: string, opts
   const scored = docs.map(({ r, toks }) => {
     let s = 0;
     for (const term of q) {
-      const tf = toks.filter((t) => t === term || (term.length > 4 && t.startsWith(term.slice(0, -1)))).length;
+      const tf = toks.filter((t) => matches(t, term)).length;
       if (tf) s += (1 + Math.log(tf)) * Math.log(1 + N / (df.get(term) ?? 1));
     }
     if (r.source_kind === "data_room") s *= 1.1; // D016: exports preferred over machine transcripts
