@@ -1,0 +1,12 @@
+services:
+  cockpit:
+    build: .
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-4-hydrogen}
+    volumes:
+      - ./data:/app/data
+    init: true
+    stop_grace_period: 30s

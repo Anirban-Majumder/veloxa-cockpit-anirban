@@ -26,6 +26,20 @@ bun test tests
 
 The embedded database allows one process at a time. When the API is running, `bun run ingest` asks it to do the work; otherwise the script ingests directly. Days count only from 10:00 IST on their release date.
 
+## Docker
+
+Requires Docker with Compose. Copy `.env.example` to `.env` and set `GOOGLE_GENERATIVE_AI_API_KEY`, then run:
+
+```sh
+docker compose up --build
+```
+
+Open http://localhost:8787. Compose mounts the repository's `./data` at `/app/data`, so the release packs, database and chat history stay on the host through container stops, removal and rebuilds. The image contains neither the database nor API keys. Only production dependencies and the built frontend are included in the runtime image.
+
+Startup checks each released day: any evidence row for that day means its entire import is treated as complete, even if files were added or a previous import was interrupted. Days without evidence are ingested. Missing concerns are generated separately; existing concerns are preserved. A generation failure stops startup; rerun the command after fixing the key or model access to retry missing concerns without reimporting evidence. Initialization can take time and incurs model calls on a fresh database. Unreleased packs stay excluded; restart after a new day's release to initialize it.
+
+Do not run the host API against the same database while the container is running. For a deliberate file-by-file refresh, use `docker compose exec cockpit bun scripts/ingest.ts` (the running API owns the database). Stop with `docker compose down`; this leaves `./data` intact.
+
 ## Code layout
 
 ```
