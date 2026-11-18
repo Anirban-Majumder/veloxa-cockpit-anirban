@@ -27,12 +27,21 @@ CREATE TABLE IF NOT EXISTS agents (
   employee_id  TEXT PRIMARY KEY,
   full_name    TEXT NOT NULL,
   work_email   TEXT,
-  department   TEXT,
-  title        TEXT,
-  manager_id   TEXT,
   join_date    TEXT,
-  location     TEXT,
   soul         TEXT                         -- reviewed persona; preserved across imports
+);
+
+-- Role and reporting line as each release recorded them, so a reorg never rewrites an earlier view.
+CREATE TABLE IF NOT EXISTS agent_profiles (
+  employee_id     TEXT NOT NULL REFERENCES agents(employee_id),
+  effective_from  TEXT NOT NULL,            -- released_at of the export that recorded it
+  department      TEXT,
+  title           TEXT,
+  manager_id      TEXT,
+  location        TEXT,
+  status          TEXT,
+  exit_date       TEXT,                     -- last working day; the agent is hidden after it
+  PRIMARY KEY (employee_id, effective_from)
 );
 
 CREATE TABLE IF NOT EXISTS conversations (

@@ -38,14 +38,17 @@ export default function App() {
   const voice = useDictation(setAsk)
 
   useEffect(() => {
-    Promise.all([api.status(), api.agents()])
-      .then(([s, a]) => { setStatus(s); setAgents(a); setCutoff(s.releases.at(-1)?.released_at ?? null) })
+    api.status()
+      .then((s) => { setStatus(s); setCutoff(s.releases.at(-1)?.released_at ?? null) })
       .catch(() => setError('The cockpit server isn’t running. Start it with `bun run dev`.'))
   }, [])
 
   useEffect(() => {
     if (!cutoff) return
     let current = true
+    api.agents(cutoff)
+      .then((a) => current && setAgents(a))
+      .catch((e: Error) => current && setError(e.message))
     api.concerns(cutoff)
       .then((d) => current && setBoard({ cutoff, concerns: d.concerns }))
       .catch((e: Error) => current && setError(e.message))
@@ -57,7 +60,7 @@ export default function App() {
 
   const chooseDay = (releasedAt: string) => {
     setCutoff(releasedAt)
-    setOpen((o) => (o?.kind === 'concern' ? null : o?.kind === 'analyst' ? { kind: 'analyst' } : o))
+    setOpen((o) => (o?.kind === 'analyst' ? { kind: 'analyst' } : null))
   }
 
   const close = useCallback(() => { setOpen(null); setFooter(null) }, [])

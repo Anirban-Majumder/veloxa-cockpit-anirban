@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
+import { compress } from "hono/compress";
 import { modelSettings } from "../../../src/ai/model";
 import { handleError, rejectForeignOrigins } from "./http";
 import { agents } from "./routes/agents";
@@ -13,6 +14,7 @@ const WEB_DIST = "apps/web/dist";
 
 const app = new Hono()
   .onError(handleError)
+  .use(compress())
   .use("/api/*", rejectForeignOrigins)
   .route("/api/status", status)
   .route("/api/concerns", concerns)
@@ -28,7 +30,7 @@ if (process.env.NODE_ENV === "production" && existsSync(WEB_DIST)) {
 const port = Number(process.env.PORT ?? 8787);
 const hostname = process.env.HOST ?? "127.0.0.1";
 
-if (!modelSettings()) console.warn("LLM_BASE_URL / LLM_MODEL are not set: chat and concern generation will fail.");
+if (!modelSettings()) console.warn("GOOGLE_GENERATIVE_AI_API_KEY is not set: chat and concern generation will fail.");
 console.log(`API listening on http://${hostname}:${port}`);
 
 export default { port, hostname, fetch: app.fetch, idleTimeout: 120 };

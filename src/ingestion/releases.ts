@@ -1,7 +1,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-export const RELEASE_ROOT = resolve(process.env.VELOXA_RELEASE_DIR ?? "Veloxa_Hackathon_Release_Packs");
+export const RELEASE_ROOT = resolve(process.env.VELOXA_RELEASE_DIR ?? "data/Release_Packs");
 const YEAR = Number(process.env.VELOXA_RELEASE_YEAR ?? 2026);
 const MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
 

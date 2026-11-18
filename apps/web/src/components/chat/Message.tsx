@@ -19,6 +19,7 @@ export function Message({ message, speaker, sources, streaming }: {
   const searched = message.parts.some((part) => part.type.startsWith('tool-'))
   const lastPart = message.parts.at(-1)
   const waitingAfterTool = streaming && !!lastPart && 'toolCallId' in lastPart && lastPart.state === 'output-available'
+  const hasContent = message.parts.some((part) => part.type.startsWith('tool-') || ('text' in part && part.text.trim()))
   const lastTextIndex = message.parts.findLastIndex((part) => part.type === 'text')
 
   return (
@@ -50,6 +51,7 @@ export function Message({ message, speaker, sources, streaming }: {
             return null
         }
       })}
+      {streaming && !hasContent && <Thinking />}
       {waitingAfterTool && <Thinking label="Reading the records" />}
     </div>
   )

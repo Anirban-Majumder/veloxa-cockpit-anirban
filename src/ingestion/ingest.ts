@@ -69,27 +69,29 @@ export async function ingestRelease(db: Db, release: Release, root = RELEASE_ROO
   return result;
 }
 
-/** Upserts the 14 roster profiles from the latest employee-master rows, preserving `soul` (D025). */
+/** Records each roster member's identity, plus their role and reporting line as of every export that lists them. */
 export async function syncAgents(db: Db): Promise<number> {
-  const rows = await selectAll<{ data_json: string }>(db,
-    `SELECT e.data_json FROM evidence e JOIN sources s ON s.id = e.source_id
+  const rows = await selectAll<{ data_json: string; released_at: string }>(db,
+    `SELECT e.data_json, s.released_at FROM evidence e JOIN sources s ON s.id = e.source_id
      WHERE e.data_json LIKE '%"Emp ID"%' AND e.data_json LIKE '%"Full Name"%'
      ORDER BY s.released_at, e.id`);
-  const profiles = rows
-    .map((row) => JSON.parse(row.data_json) as Record<string, string | undefined>)
-    .filter((d) => d["Emp ID"] && AGENT_ROSTER.includes(d["Emp ID"]));
+  const records = rows
+    .map((row) => ({ releasedAt: row.released_at, fields: JSON.parse(row.data_json) as Record<string, string | undefined> }))
+    .filter(({ fields }) => fields["Emp ID"] && AGENT_ROSTER.includes(fields["Emp ID"]));
 
   await transaction(db, async () => {
-    for (const d of profiles) {
+    for (const { releasedAt, fields: d } of records) {
       await execute(db,
-        `INSERT INTO agents (employee_id, full_name, work_email, department, title, manager_id, join_date, location)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (employee_id) DO UPDATE SET full_name = excluded.full_name, work_email = excluded.work_email,
-           department = excluded.department, title = excluded.title, manager_id = excluded.manager_id,
-           join_date = excluded.join_date, location = excluded.location`,
-        d["Emp ID"]!, d["Full Name"]!, d["Work Email"] ?? null, d["Department"] ?? null, d["Title"] ?? null,
-        d["Manager ID"] ?? null, d["Join Date"] ?? null, d["Location"] ?? null);
+        `INSERT INTO agents (employee_id, full_name, work_email, join_date) VALUES (?, ?, ?, ?)
+         ON CONFLICT (employee_id) DO UPDATE SET
+           full_name = excluded.full_name, work_email = excluded.work_email, join_date = excluded.join_date`,
+        d["Emp ID"]!, d["Full Name"]!, d["Work Email"] ?? null, d["Join Date"] ?? null);
+      await execute(db,
+        `INSERT OR REPLACE INTO agent_profiles (employee_id, effective_from, department, title, manager_id, location, status, exit_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        d["Emp ID"]!, releasedAt, d["Department"] ?? null, d["Title"] ?? null, d["Manager ID"] ?? null,
+        d["Location"] ?? null, d["Status"] ?? null, d["Exit Date"]?.slice(0, 10) || null);
     }
   });
-  return profiles.length;
+  return new Set(records.map(({ fields }) => fields["Emp ID"])).size;
 }

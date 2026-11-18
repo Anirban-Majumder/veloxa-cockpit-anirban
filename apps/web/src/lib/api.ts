@@ -32,6 +32,8 @@ export interface Agent {
   manager_id: string | null
   join_date: string
   location: string
+  status: string | null
+  exit_date: string | null
 }
 
 export interface Status {
@@ -60,7 +62,7 @@ const chatUrl = (agent: string, cutoff?: string, conversation?: number) =>
 
 export const api = {
   status: () => request<Status>('/api/status'),
-  agents: () => request<Agent[]>('/api/agents'),
+  agents: (cutoff: string) => request<Agent[]>(`/api/agents?cutoff=${encodeURIComponent(cutoff)}`),
   concerns: (cutoff: string) =>
     request<{ cutoff: string | null; concerns: Concern[] }>(`/api/concerns?cutoff=${encodeURIComponent(cutoff)}`),
   chatHistory: (agent: string, cutoff: string, conversation?: number) =>

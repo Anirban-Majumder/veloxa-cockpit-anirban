@@ -6,7 +6,7 @@ import { createChatAgent, searchedSuccessfully, type ChatMessage } from "../../.
 import { HISTORY_LIMIT, isSmallTalk } from "../../../../src/chat/config";
 import { conversationBelongsTo, currentConversation, latestConversation, loadMessages, savedQuestion, saveExchange, startConversation } from "../../../../src/chat/history";
 import { openDb } from "../../../../src/db/client";
-import { releasedCutoffs } from "../../../../src/retrieval/evidence";
+import { resolveCutoff } from "../cutoff";
 import { HttpError, readBody } from "../http";
 
 const newMessageId = createIdGenerator({ prefix: "msg", size: 16 });
@@ -29,8 +29,8 @@ const ChatRequest = z.object({
 export const chat = new Hono()
   .get("/", async (c) => {
     const db = await openDb();
-    const agentId = (await resolveAgent(c.req.query("agent")))?.employee_id ?? null;
     const cutoff = await resolveCutoff(c.req.query("cutoff"));
+    const agentId = (await resolveAgent(c.req.query("agent"), cutoff))?.employee_id ?? null;
     const requested = c.req.query("conversation");
     const conversationId = requested
       ? await resolveConversation(agentId, Number(requested))
@@ -38,16 +38,16 @@ export const chat = new Hono()
     return c.json(conversationId ? await loadMessages(db, conversationId, cutoff) : []);
   })
   .delete("/", async (c) => {
-    const agent = await resolveAgent(c.req.query("agent"));
+    const agent = await resolveAgent(c.req.query("agent"), await resolveCutoff(c.req.query("cutoff")));
     const conversation = await startConversation(await openDb(), agent?.employee_id ?? null);
     return c.json({ conversation });
   })
   .post("/", async (c) => {
     const body = await readBody(c, ChatRequest);
     const db = await openDb();
-    const agent = await resolveAgent(body.agent);
-    const agentId = agent?.employee_id ?? null;
     const cutoff = await resolveCutoff(body.cutoff);
+    const agent = await resolveAgent(body.agent, cutoff);
+    const agentId = agent?.employee_id ?? null;
     const conversationId = body.conversation
       ? await resolveConversation(agentId, body.conversation)
       : await currentConversation(db, agentId);
@@ -91,18 +91,10 @@ async function resolveConversation(agentId: string | null, conversationId: numbe
   return conversationId;
 }
 
-async function resolveAgent(id: string | undefined) {
+async function resolveAgent(id: string | undefined, cutoff: string) {
   if (!id || id === "analyst") return undefined;
-  const agent = await findAgent(await openDb(), id);
-  if (!agent) throw new HttpError(404, `Unknown person ${id}.`);
+  const agent = await findAgent(await openDb(), id, cutoff);
+  if (!agent) throw new HttpError(404, `${id} isn't at Veloxa as of ${cutoff}.`);
   return agent;
 }
 
-/** Only exact release cutoffs are accepted: they are compared as text in SQL, so other offsets could leak later data. */
-async function resolveCutoff(requested: string | undefined): Promise<string> {
-  const cutoffs = (await releasedCutoffs(await openDb())).map((r) => r.released_at);
-  if (cutoffs.length === 0) throw new HttpError(409, "Nothing has been ingested yet. Run `bun run ingest`.");
-  if (requested === undefined) return cutoffs.at(-1)!;
-  if (!cutoffs.includes(requested)) throw new HttpError(400, `Unknown cutoff ${requested}. Use one of: ${cutoffs.join(", ")}.`);
-  return requested;
-}

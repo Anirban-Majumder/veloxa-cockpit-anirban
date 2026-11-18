@@ -32,7 +32,6 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 @keyframes blink { 0%, 92%, 100% { transform: scaleY(1) } 95% { transform: scaleY(0.1) } }
 @keyframes glow { 0%, 100% { opacity: .85 } 50% { opacity: 1 } }
 @keyframes type-hands { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(1px) } }
-@keyframes note-in { from { opacity: 0; transform: translateY(-14px) rotate(var(--tilt)) scale(.96) } to { opacity: 1; transform: translateY(0) rotate(var(--tilt)) } }
 @keyframes panel-in { from { transform: translateX(24px); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes rise { from { transform: translateY(16px); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes dots { 0%, 20% { opacity: .2 } 50% { opacity: 1 } 100% { opacity: .2 } }
@@ -41,12 +40,21 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .chibi-eyes { animation: blink 5s infinite; transform-origin: center; transform-box: fill-box; }
 .chibi-hands { animation: type-hands .35s ease-in-out infinite; }
 .screen-glow { animation: glow 4s ease-in-out infinite; }
-.note { animation: note-in .5s cubic-bezier(.2,.9,.3,1.2) both; transform: rotate(var(--tilt)); }
+.note { transform: rotate(var(--tilt)); }
 .panel-in { animation: panel-in .22s ease-out both; }
 .rise { animation: rise .22s ease-out both; }
 .typing span { animation: dots 1.2s infinite; }
 .typing span:nth-child(2) { animation-delay: .2s }
 .typing span:nth-child(3) { animation-delay: .4s }
+
+.thinking-orb { width: .7rem; height: .7rem; border-radius: 999px; background: var(--color-route); animation: orb 1.4s ease-in-out infinite; }
+.thinking-text {
+  background: linear-gradient(90deg, var(--color-ink-soft) 30%, var(--color-ink) 50%, var(--color-ink-soft) 70%) 0 0 / 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes orb { 0%, 100% { transform: scale(.7); opacity: .5 } 50% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-route) 20%, transparent) } }
+@keyframes shimmer { to { background-position: -200% 0 } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -96,7 +104,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 /* ── HQ shell: the whole page is the building ─────────────────────────────── */
 :root {
   --wall: #151d27; --trim: #0b1118; --paper-px: #f4efdf; --gold: #f2a900;
-  --hdr: 56px;              /* header strip */
+  --hdr: 72px;              /* header strip */
   --gap: 16px;              /* the one gutter used everywhere on the stage */
   --frame: 6px;             /* office frame border */
   /* Office width if only the height limited it. */
@@ -107,7 +115,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
   --oh: calc((var(--ow) - 2 * var(--frame)) * 416 / 640 + 2 * var(--frame));
 }
 .hq { height: 100dvh; display: grid; grid-template-rows: var(--hdr) 1fr; overflow: hidden; background: #0f151d; color: #e9eef3; }
-.hq-roof { display: flex; align-items: center; gap: 20px; padding: 0 var(--gap); background: #2c3b4e; border-bottom: 3px solid var(--trim); min-width: 0; }
+.hq-roof { display: flex; align-items: center; gap: 20px; padding: 10px var(--gap); background: #2c3b4e; border-bottom: 3px solid var(--trim); min-width: 0; }
 .hq-brand { display: flex; align-items: center; gap: 8px; font-size: 19px; color: #dfe7ee; flex: none; }
 .hq-brand b { color: var(--gold); font-weight: 700; }
 .hq-logo { display: grid; place-items: center; width: 26px; height: 26px; background: var(--gold); color: var(--trim); font-size: 16px; box-shadow: 0 0 0 2px var(--trim); }
@@ -132,7 +140,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .px-btn:has(:focus-visible), .px-btn:focus-visible { outline: 3px solid #9fd3e8; outline-offset: 2px; }
 
 /* Notice board with the three worries */
-.board { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #6b4a2f; box-shadow: 0 0 0 4px var(--trim), inset 0 0 0 4px #8a6240, inset 0 0 0 8px #4f3520; padding: 12px; margin: 4px; }
+.board { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #6b4a2f; box-shadow: 0 0 0 4px var(--trim), inset 0 0 0 4px #8a6240, inset 0 0 0 8px #4f3520; padding: 12px; margin: 0 4px 4px; }
 .board-head { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 10px; }
 .board-head h2 { white-space: nowrap; font-size: clamp(16px, 1.3vw, 20px); font-weight: 700; color: #fff4d6; text-shadow: 2px 2px 0 #3a2616; }
 .board-sub { white-space: nowrap; font: 600 12px var(--font-display); color: #f2d9a6; text-transform: uppercase; letter-spacing: .1em; }
@@ -142,7 +150,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .board-empty { color: #3a2616; font-size: 14px; background: #f4efdfcc; padding: 10px; }
 .board-foot { margin-top: 8px; text-align: center; font: 500 12px var(--font-display); color: #f2d9a6; }
 .note-px { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; text-align: left; padding: 14px 12px 10px; color: #2a2116; cursor: pointer; transform: rotate(var(--tilt));
-  box-shadow: 0 0 0 2px #3a2616, 4px 4px 0 2px #0004; transition: transform .12s steps(2); animation: note-in .4s steps(4) both; }
+  box-shadow: 0 0 0 2px #3a2616, 4px 4px 0 2px #0004; transition: transform .12s steps(2); }
 .note-px:hover, .note-px:focus-visible { transform: rotate(0) translateY(-3px); }
 .note-px:focus-visible { outline: 3px solid #9fd3e8; outline-offset: 3px; }
 .note-1 { background: #ffd34d; } .note-2 { background: #fff0a8; } .note-3 { background: #ffd0b5; }
@@ -193,8 +201,8 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 
 @media (max-width: 900px) {
   /* Phone/tablet portrait: worries, then the office at full width, then the ask box filling the rest. */
-  :root { --hdr: 76px; --gap: 10px; --frame: 4px; --ow: calc(100vw - 2 * var(--gap)); }
-  .hq-roof { flex-wrap: wrap; align-content: center; gap: 6px 12px; padding: 6px var(--gap); }
+  :root { --hdr: 88px; --gap: 10px; --frame: 4px; --ow: calc(100vw - 2 * var(--gap)); }
+  .hq-roof { flex-wrap: wrap; align-content: center; gap: 6px 12px; padding: 12px var(--gap); }
   .hq-brand { font-size: 16px; } .hq-logo { width: 22px; height: 22px; font-size: 13px; }
   .hq-greeting { font-size: 16px; flex: 1; }
   .hq-people { display: none; }

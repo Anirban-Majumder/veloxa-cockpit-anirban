@@ -28,10 +28,13 @@ export function handleError(error: Error, c: Context) {
 }
 
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const PUBLIC_ORIGINS = (process.env.PUBLIC_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean);
+
+const isAllowedOrigin = (origin: string) => LOCAL_ORIGIN.test(origin) || PUBLIC_ORIGINS.includes(origin);
 
 /** Blocks other websites from triggering paid model calls through the browser; the CLI sends no Origin. */
 export async function rejectForeignOrigins(c: Context, next: Next) {
   const origin = c.req.header("origin");
-  if (c.req.method !== "GET" && origin && !LOCAL_ORIGIN.test(origin)) throw new HttpError(403, "Cross-origin requests are not allowed.");
+  if (c.req.method !== "GET" && origin && !isAllowedOrigin(origin)) throw new HttpError(403, "Cross-origin requests are not allowed.");
   await next();
 }

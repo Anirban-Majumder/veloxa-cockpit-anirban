@@ -1,6 +1,6 @@
 import { isStepCount, ToolLoopAgent, type InferAgentUIMessage } from "ai";
 import type { Agent } from "../agents/store";
-import { getModel } from "../ai/model";
+import { getModel, lightThinking } from "../ai/model";
 import { largeTableSummaries } from "../concerns/evidence-pack";
 import type { Db } from "../db/client";
 import { chatInstructions, MAX_STEPS, SEARCH_FAILED } from "./config";
@@ -25,6 +25,7 @@ export async function createChatAgent(db: Db, cutoff: string, agent: Agent | und
     activeTools: tables.size ? ["search_evidence", "summarize_table"] : ["search_evidence"],
     stopWhen: isStepCount(MAX_STEPS),
     temperature: 0.2,
+    ...(mustSearch ? {} : { providerOptions: lightThinking }),
     prepareStep: ({ stepNumber, steps }) => {
       const searched = steps.some((step) => step.toolResults.length > 0);
       const lastStep = stepNumber === MAX_STEPS - 1;

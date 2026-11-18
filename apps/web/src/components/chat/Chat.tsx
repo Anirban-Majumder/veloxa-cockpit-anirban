@@ -92,10 +92,14 @@ function Conversation({ agent, cutoff, conversation, speaker, suggestions, initi
           message={message}
           speaker={speaker}
           sources={sources}
-          streaming={status === 'streaming' && index === messages.length - 1}
+          streaming={busy && index === messages.length - 1}
         />
       ))}
-      {busy && lastIsUser && <Thinking />}
+      {busy && lastIsUser && (
+        <div className="max-w-[95%] w-fit rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-sm ring-1 ring-ink/5">
+          <Thinking />
+        </div>
+      )}
       {error && (
         <p className="flex items-center gap-3 text-alarm">
           {error.message || 'Something went wrong.'}

@@ -13,8 +13,8 @@ export function Whiteboard({ concerns, loading, empty, onOpen }: {
       <header className="board-head">
         <h2 id="board-title" className="font-display">What to worry about</h2>
       </header>
-      <div className="board-cork">
-        {loading && <p className="board-empty">Reading the morning’s files…</p>}
+      <div className="board-cork" aria-busy={loading}>
+        {loading && <p className="sr-only" role="status">Reading the morning’s files…</p>}
         {!loading && concerns.length === 0 && <p className="board-empty">{empty ?? 'Nothing pinned for this date yet.'}</p>}
         {top && <Note c={top} big onOpen={onOpen} />}
         {rest.map((c) => <Note key={c.id} c={c} onOpen={onOpen} />)}
