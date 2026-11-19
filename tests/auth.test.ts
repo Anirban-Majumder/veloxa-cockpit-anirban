@@ -121,8 +121,8 @@ describe("passphrase authentication", () => {
   });
 
   test("allows configured public origins and rejects others", async () => {
-    const app = makeApp(passphrase, { publicOrigins: ["https://140.245.45.107"] });
-    const ok = await login(app, passphrase, "192.0.2.1", { origin: "https://140.245.45.107" });
+    const app = makeApp(passphrase, { publicOrigins: ["https://cockpit.example.com"] });
+    const ok = await login(app, passphrase, "192.0.2.1", { origin: "https://cockpit.example.com" });
     expect(ok.status).toBe(200);
     const foreign = await login(app, passphrase, "192.0.2.1", { origin: "https://evil.test" });
     expect(foreign.status).toBe(403);
