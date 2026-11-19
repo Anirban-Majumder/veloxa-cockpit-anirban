@@ -29,7 +29,7 @@ export function Panel({ title, subtitle, onClose, full, children, footer, avatar
         className={`px-window panel-in relative flex h-full w-full flex-col outline-none ${full ? '' : 'md:max-w-[34rem]'}`}
       >
         <header className="px-window-bar">
-          {avatar && <span className="px-avatar" aria-hidden style={{ backgroundImage: `url(/office/people/${sprite}.png)` }} />}
+          {avatar && <span className="px-avatar" aria-hidden style={{ backgroundImage: `url(office/people/${sprite}.png)` }} />}
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-xl leading-tight sm:text-2xl">{title}</h2>
             {subtitle && <div className="mt-0.5 text-sm text-[#b9c6d3]">{subtitle}</div>}

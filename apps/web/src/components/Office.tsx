@@ -99,7 +99,7 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover, onFocus }: {
           <Sheet
             id={sprite(agent)} x={x + 16} y={y + 12} z={y + 44}
             col={active ? 7 : 3 + (tick % 2)} row={active ? 0 : 1}
-            className={active ? 'sheet-active' : ''}
+            className={`${active ? 'sheet-active' : ''} ${isRemote(agent) ? 'is-remote' : ''}`}
           />
           <button
             type="button"
@@ -113,13 +113,16 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover, onFocus }: {
             aria-label={`Talk to ${agent.full_name}, ${agent.title}`}
           >
             <span className="speech">{active ? 'Hi!' : ''}</span>
-            <span className="nameplate">{agent.full_name.split(' ')[0]}</span>
+            <span className="nameplate">{agent.full_name.split(' ')[0]}{isRemote(agent) && <span className="remote-tag"> (remote)</span>}</span>
           </button>
         </>
       )}
     </>
   )
 }
+
+/** Remote staff keep their desk on the floor but are drawn faded, since the records place them elsewhere. */
+export const isRemote = (agent: Agent) => /\bremote\b/i.test(agent.location ?? '') || agent.status?.trim().toLowerCase() === 'remote'
 
 type Walker = { el: HTMLButtonElement | null; sprite: HTMLSpanElement | null; door: HTMLDivElement | null }
 
@@ -225,8 +228,8 @@ function useCat(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
   }, [ref, enabled])
 }
 
-export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
-  data?: OfficeData; selected?: string; alerts?: number; onOpen: (a: Agent) => void; onWhiteboard: () => void
+export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard, children }: {
+  data?: OfficeData; selected?: string; alerts?: number; onOpen: (a: Agent) => void; onWhiteboard: () => void; children?: ReactNode
 }) {
   const [tick, setTick] = useState(0)
   const [hover, setHoverPerson] = useState<string | null>(null)
@@ -345,11 +348,10 @@ export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
           {/* People & Ops */}
           <Img file="SMALL_PAINTING" x={426} y={4} w={16} h={32} />
           <Img file="SMALL_PAINTING_2" x={446} y={4} w={16} h={32} />
-          <Img file="HANGING_PLANT" x={616} y={2} w={16} h={32} />
           <Img file="SOFA_FRONT" x={540} y={150} w={32} h={16} />
           <Img file="SOFA_FRONT" x={572} y={150} w={32} h={16} />
           <Img file="COFFEE_TABLE" x={556} y={168} w={32} h={32} />
-          <Img file="POT" x={618} y={196} w={16} h={16} />
+          <Img file="PLANT_2" x={618} y={178} w={16} h={32} />
           {/* Marketing */}
           <div className="rug" style={at(24, 384, 128, 24, 1)} />
           <Img file="LARGE_PAINTING" x={136} y={268} w={32} h={32} />
@@ -359,7 +361,7 @@ export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
           {/* Corridor */}
           <div className="runner" style={at(16, CORRIDOR.y + 16, W - 32, 16, 1)} />
           {[64, 224, 416, 576].map((x) => <div key={x} className="ceiling-light" style={at(x - 30, CORRIDOR.y - 6, 60, 60, 2)} />)}
-          <button type="button" className="board-hit" style={at(354, CORRIDOR.y - 12, 36, 36, 302)} onClick={onWhiteboard} aria-label="Read the whiteboard: today’s top worries">
+          <button type="button" className="board-hit" style={at(354, CORRIDOR.y - 12, 36, 36, 302)} onClick={onWhiteboard} aria-label="Open the notice board">
             <img className="px" src={`${ART}WHITEBOARD.png`} alt="" />
             <span className="board-tag">NOTICE</span>
             {alerts > 0 && <span className="board-alert" aria-hidden>!</span>}
@@ -374,8 +376,6 @@ export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
           <Img file="CUSHIONED_BENCH" x={LOBBY.x + 10} y={LOBBY.y + 78} w={16} h={16} />
           {/* Break room */}
           <Img file="SMALL_TABLE_FRONT" x={BREAK.x + 140} y={BREAK.y + 30} w={32} h={32} />
-          <Img file="COFFEE" x={BREAK.x + 148} y={BREAK.y + 30} w={16} h={16} z={BREAK.y + 64} />
-          <div className="steam" style={at(BREAK.x + 152, BREAK.y + 18, 8, 12, 999)}>≈</div>
           <Img file="SOFA_FRONT" x={BREAK.x + 56} y={BREAK.y + 54} w={32} h={16} />
           <Img file="SOFA_FRONT" x={BREAK.x + 88} y={BREAK.y + 54} w={32} h={16} />
           <Img file="COFFEE_TABLE" x={BREAK.x + 72} y={BREAK.y + 72} w={32} h={32} />
@@ -394,13 +394,13 @@ export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
             const active = isActive(a)
             return (
               <div key={a.employee_id}>
-                <Sheet id={sprite(a)} x={s.x - 8} y={s.y - 30} z={s.y} col={active ? 7 : (tick + i) % 8 < 6 ? 1 : 7} row={0} />
+                <Sheet id={sprite(a)} x={s.x - 8} y={s.y - 30} z={s.y} col={active ? 7 : (tick + i) % 8 < 6 ? 1 : 7} row={0} className={isRemote(a) ? 'is-remote' : ''} />
                 <button type="button" className={`desk-hit ${active ? 'is-active' : ''}`} style={at(s.x - 18, s.y - 36, 36, 44, 900)}
                   onClick={() => onOpen(a)} onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHover(a.employee_id) }}
                   onPointerLeave={() => setHover(null)}
                   onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) setFocus(a.employee_id) }} onBlur={() => setFocus(null)} aria-label={`Talk to ${a.full_name}, ${a.title}`}>
                   <span className="speech">{active ? 'Hi!' : ''}</span>
-                  <span className="nameplate">{a.full_name.split(' ')[0]}</span>
+                  <span className="nameplate">{a.full_name.split(' ')[0]}{isRemote(a) && <span className="remote-tag"> (remote)</span>}</span>
                 </button>
               </div>
             )
@@ -429,6 +429,7 @@ export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
           </button>
           <div ref={cat} className="px cat" style={{ ...at(476, 382, 8, 16, 396), backgroundImage: `url(${ART}cat.png)`, backgroundPosition: '60% 0%' }} aria-hidden />
         </div>
+        {children}
         {data && activeSignal
           ? <SignalDetails signal={activeSignal} data={data} />
           : data && activePerson && <RelationshipLabels person={activePerson} edges={edges} names={data.names}

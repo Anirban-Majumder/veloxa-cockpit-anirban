@@ -3,11 +3,13 @@ import { api, dayLabel, type Agent, type OfficeData, type Concern, type Status }
 import { Whiteboard } from './components/Whiteboard'
 import { ConcernDetail } from './components/ConcernDetail'
 import { Office } from './components/Office'
+import { OfficeRoster } from './components/OfficeRoster'
 import { Panel } from './components/Panel'
 import { Chat } from './components/chat/Chat'
 import { useDictation } from './lib/dictation'
 
 type Open =
+  | { kind: 'notice' }
   | { kind: 'concern'; concern: Concern }
   | { kind: 'person'; agent: Agent }
   | { kind: 'analyst'; question?: { text: string; cutoff: string } }
@@ -57,7 +59,7 @@ export default function App() {
     return () => { current = false }
   }, [cutoff])
 
-  const agents = office && office.cutoff === cutoff ? office.data.agents : []
+  const officeData = office?.cutoff === cutoff ? office?.data : undefined
   const loading = !!cutoff && board?.cutoff !== cutoff
   const concerns = useMemo(() => (board?.cutoff === cutoff ? board.concerns : []), [board, cutoff])
 
@@ -102,11 +104,11 @@ export default function App() {
     setFooter(null)
     setOpen({ kind: 'analyst' })
   }
-  const focusBoard = useCallback(() => {
-    const first = concerns[0]
-    if (first) setOpen({ kind: 'concern', concern: first })
-    else document.getElementById('board-title')?.scrollIntoView({ behavior: 'smooth' })
-  }, [concerns])
+  const openPerson = (agent: Agent) => setOpen({ kind: 'person', agent })
+  const openConcern = (concern: Concern) => setOpen({ kind: 'concern', concern })
+  const emptyBoard = status && !status.concernCutoffs.includes(cutoff ?? '')
+    ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day.'
+    : undefined
 
   return (
     <div className="hq">
@@ -117,7 +119,6 @@ export default function App() {
           <span className="font-display">Veloxa Digital <b>HQ</b></span>
         </div>
         <h1 className="hq-greeting font-display">{greeting()}</h1>
-        {agents.length > 0 && <span className="hq-people"><span className="live-dot" aria-hidden /> {agents.length} in the office</span>}
         {status && status.releases.length > 0 && (
           <fieldset className="hq-days">
             <legend className="sr-only">What the company knew on</legend>
@@ -142,19 +143,21 @@ export default function App() {
         <div className="hq-office">
           <Office
             key={cutoff}
-            data={office?.cutoff === cutoff ? office?.data : undefined}
+            data={officeData}
             alerts={concerns.length}
             selected={open?.kind === 'person' ? open.agent.employee_id : undefined}
-            onOpen={(a) => setOpen({ kind: 'person', agent: a })}
-            onWhiteboard={focusBoard}
-          />
+            onOpen={openPerson}
+            onWhiteboard={() => setOpen({ kind: 'notice' })}
+          >
+            {officeData && <OfficeRoster data={officeData} />}
+          </Office>
         </div>
         <aside className="hq-side">
           <Whiteboard
-            concerns={concerns}
+            concerns={concerns.slice(0, 3)}
             loading={loading && !error}
-            empty={status && !status.concernCutoffs.includes(cutoff ?? '') ? 'The worries for this date haven’t been worked out yet. Run `bun run ingest` for this day.' : undefined}
-            onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
+            empty={emptyBoard}
+            onOpen={openConcern}
           />
           <form className="dock" onSubmit={(e) => { e.preventDefault(); void askAnalyst(ask.trim() || undefined) }}>
             <label htmlFor="dock-ask" className="dock-head font-display">Ask Veloxa Digital HQ</label>
@@ -183,8 +186,13 @@ export default function App() {
         </aside>
       </main>
 
+      {open?.kind === 'notice' && (
+        <Panel title="What to worry about" onClose={close}>
+          <Whiteboard expanded concerns={concerns} loading={loading && !error} empty={emptyBoard} onOpen={openConcern} />
+        </Panel>
+      )}
       {open?.kind === 'concern' && (
-        <Panel title={open.concern.title} subtitle={`Worry ${open.concern.rank} of 3`} onClose={close}>
+        <Panel title={open.concern.title} subtitle={`Worry ${open.concern.rank} of ${concerns.length}`} onClose={close}>
           <ConcernDetail c={open.concern} />
         </Panel>
       )}

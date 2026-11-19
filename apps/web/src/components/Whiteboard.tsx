@@ -1,28 +1,34 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Concern } from '../lib/api'
 
 const URGENCY = ['', 'Watch', 'This week', 'Today'] as const
 const NOTE = ['note-1', 'note-2', 'note-3']
 
-/** The CEO's three worries as pixel notes pinned to the office notice board, most important first. */
-export function Whiteboard({ concerns, loading, empty, onOpen }: {
-  concerns: Concern[]; loading: boolean; empty?: string; onOpen: (c: Concern) => void
+export function Whiteboard({ concerns, loading, empty, onOpen, expanded = false }: {
+  concerns: Concern[]; loading: boolean; empty?: string; onOpen: (c: Concern) => void; expanded?: boolean
 }) {
-  const [top, ...rest] = concerns
+  const [limit, setLimit] = useState(6)
+  const cork = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (limit > 6) cork.current?.querySelectorAll('button').item(limit - 6)?.focus()
+  }, [limit])
+  const visible = expanded ? concerns.slice(0, limit) : concerns
   return (
-    <section aria-labelledby="board-title" className="board">
-      <header className="board-head">
+    <section aria-label={expanded ? 'Pinned concerns' : undefined} aria-labelledby={expanded ? undefined : 'board-title'}
+      className={expanded ? 'board board-expanded' : 'board'}>
+      {!expanded && <header className="board-head">
         <h2 id="board-title" className="font-display">What to worry about</h2>
-      </header>
-      <div className="board-cork" aria-busy={loading}>
+      </header>}
+      <div ref={cork} className="board-cork" aria-busy={loading}>
         {loading && <p className="sr-only" role="status">Reading the morning’s files…</p>}
         {!loading && concerns.length === 0 && <p className="board-empty">{empty ?? 'Nothing pinned for this date yet.'}</p>}
-        {top && <Note c={top} big onOpen={onOpen} />}
-        {rest.map((c) => <Note key={c.id} c={c} onOpen={onOpen} />)}
+        {visible.map((c, index) => <Note key={c.id} c={c} big={!expanded && index === 0} onOpen={onOpen} />)}
       </div>
-      
+      {expanded && limit < concerns.length && <div className="board-foot">
+        <button type="button" className="px-btn" onClick={() => setLimit((current) => current + 6)}>Load more</button>
+      </div>}
     </section>
   )
-
 }
 
 function Note({ c, big, onOpen }: { c: Concern; big?: boolean; onOpen: (c: Concern) => void }) {

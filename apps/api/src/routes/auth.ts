@@ -1,10 +1,11 @@
+import { describeRoute } from "hono-openapi";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { Hono, type Context } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
 import type { DeploySettings } from "../config";
-import { HttpError, readBody, rejectForeignOrigins } from "../http";
+import { HttpError, requireJson, validateJson, rejectForeignOrigins } from "../http";
 
 const SESSION = "veloxa_session";
 const SESSION_SECONDS = 7 * 24 * 60 * 60;
@@ -46,6 +47,21 @@ export function auth(passphrase: string | undefined, settings: Pick<DeploySettin
     return (failuresByIp.get(ip) ?? []).filter((time) => time > now - FAILURE_WINDOW_MS);
   }
 
+  function checkLimit(c: Context, ip: string, now: number) {
+    const failures = recentFailures(ip, now);
+    if (failures.length >= MAX_FAILURES) {
+      c.header("Retry-After", String(Math.ceil((failures[0]! + FAILURE_WINDOW_MS - now) / 1000)));
+      throw new HttpError(429, "Too many failed attempts. Try again in a minute.");
+    }
+    return failures;
+  }
+
+  async function checkLogin(c: Context, next: Next) {
+    if (!expectedHash) return c.json({ ok: true });
+    checkLimit(c, clientIp(c), Date.now());
+    await next();
+  }
+
   return new Hono()
     .use("*", async (c, next) => {
       c.header("Cache-Control", "no-store");
@@ -63,28 +79,43 @@ export function auth(passphrase: string | undefined, settings: Pick<DeploySettin
       return c.redirect(`${base}/login`);
     })
     .use("/api/*", rejectForeignOrigins(settings.publicOrigins))
-    .get("/login", (c) => {
+    .get("/login", describeRoute({
+      summary: "Show the sign-in page",
+      description: "Serves the browser sign-in page when authentication is enabled.",
+      tags: ["Authentication"],
+      responses: {
+        200: { description: "Sign-in page" },
+        302: { description: "Redirect to the dashboard" },
+      },
+    }), (c) => {
       if (!expectedHash) return c.redirect(`${base}/`);
       return c.body(Bun.file(loginPage).stream(), 200, { "Content-Type": "text/html; charset=utf-8" });
     })
-    .get("/api/session", (c) => c.json({ enabled: !!expectedHash }))
-    .post("/api/login", async (c) => {
-      if (!expectedHash) return c.json({ ok: true });
-
+    .get("/api/session", describeRoute({
+      summary: "Get session settings",
+      description: "Reports whether passphrase authentication is enabled.",
+      tags: ["Authentication"],
+      responses: {
+        200: { description: "Session settings" },
+        401: { description: "Authentication required" },
+      },
+    }), (c) => c.json({ enabled: !!expectedHash }))
+    .post("/api/login", describeRoute({
+      summary: "Sign in",
+      description: "Exchanges a valid passphrase for a signed browser session cookie.",
+      tags: ["Authentication"],
+      responses: {
+        200: { description: "Signed in" },
+        400: { description: "Invalid request body" },
+        401: { description: "Incorrect passphrase" },
+        415: { description: "Unsupported media type" },
+        429: { description: "Too many failed attempts" },
+      },
+    }), checkLogin, requireJson, validateJson(loginBody), async (c) => {
       const ip = clientIp(c);
-      function checkLimit(now: number) {
-        const failures = recentFailures(ip, now);
-        if (failures.length >= MAX_FAILURES) {
-          c.header("Retry-After", String(Math.ceil((failures[0]! + FAILURE_WINDOW_MS - now) / 1000)));
-          throw new HttpError(429, "Too many failed attempts. Try again in a minute.");
-        }
-        return failures;
-      }
-
-      checkLimit(Date.now());
-      const { passphrase: submitted } = await readBody(c, loginBody);
+      const { passphrase: submitted } = c.req.valid("json");
       const now = Date.now();
-      const failures = checkLimit(now);
+      const failures = checkLimit(c, ip, now);
       if (!matches(submitted)) {
         failuresByIp.set(ip, [...failures, now]);
         throw new HttpError(401, "Incorrect passphrase.");
@@ -97,7 +128,15 @@ export function auth(passphrase: string | undefined, settings: Pick<DeploySettin
       });
       return c.json({ ok: true });
     })
-    .post("/api/logout", (c) => {
+    .post("/api/logout", describeRoute({
+      summary: "Sign out",
+      description: "Expires the browser session cookie.",
+      tags: ["Authentication"],
+      responses: {
+        200: { description: "Signed out" },
+        401: { description: "Authentication required" },
+      },
+    }), (c) => {
       deleteCookie(c, SESSION, cookieOptions);
       return c.json({ ok: true });
     });

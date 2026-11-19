@@ -86,7 +86,7 @@ export const api = {
   status: () => request<Status>('api/status'),
   office: (cutoff: string) => request<OfficeData>(`api/agents/office?cutoff=${encodeURIComponent(cutoff)}`),
   concerns: (cutoff: string) =>
-    request<{ cutoff: string | null; concerns: Concern[] }>(`api/concerns?cutoff=${encodeURIComponent(cutoff)}`),
+    request<{ cutoff: string | null; concerns: Concern[] }>(`api/concerns?cutoff=${encodeURIComponent(cutoff)}&limit=all`),
   chatHistory: (agent: string, cutoff: string, conversation?: number) =>
     request<ChatMessage[]>(chatUrl(agent, cutoff, conversation)),
   newConversation: (agent: string) =>

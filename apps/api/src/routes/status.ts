@@ -1,3 +1,4 @@
+import { describeRoute } from "hono-openapi";
 import { Hono } from "hono";
 import { modelSettings } from "../../../../src/ai/model";
 import { concernCutoffs } from "../../../../src/concerns/store";
@@ -6,7 +7,14 @@ import { DB_PATH, openDb, selectAll } from "../../../../src/db/client";
 import { isReleased, RELEASE_ROOT } from "../../../../src/ingestion/releases";
 import { releasedCutoffs } from "../../../../src/retrieval/evidence";
 
-export const status = new Hono().get("/", async (c) => {
+export const status = new Hono().get("/", describeRoute({
+  summary: "Get dashboard status",
+  description: "Reports available releases, source and evidence counts, and service configuration.",
+  tags: ["Status"],
+  responses: {
+    200: { description: "Dashboard status" },
+  },
+}), async (c) => {
   const db = await openDb();
   const perRelease = await selectAll<{ released_at: string; sources: number; evidence: number }>(db,
     `SELECT s.released_at, COUNT(DISTINCT s.id) AS sources, COUNT(e.id) AS evidence

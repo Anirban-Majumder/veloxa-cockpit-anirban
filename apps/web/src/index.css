@@ -126,8 +126,7 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .hq-brand b { color: var(--gold); font-weight: 700; }
 .hq-logo { display: grid; place-items: center; width: 26px; height: 26px; background: var(--gold); color: var(--trim); font-size: 16px; box-shadow: 0 0 0 2px var(--trim); }
 .hq-greeting { font-size: clamp(17px, 2vw, 24px); font-weight: 700; color: #fff7e2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.hq-people { margin-right: auto; font: 500 13px var(--font-display); color: #9fb0c2; white-space: nowrap; }
-.hq-days { display: flex; align-items: center; gap: 6px; flex: none; }
+.hq-days { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
 .hq-days-label { font: 600 12px var(--font-display); color: #9fb0c2; margin-right: 2px; }
 .hq-error { position: fixed; top: calc(var(--hdr) + 8px); left: 50%; transform: translateX(-50%); z-index: 30; padding: 10px 14px; background: #fbd9c9; color: var(--color-alarm); box-shadow: 0 0 0 3px var(--trim); }
 /* Stage: office + column share one height and are centred as a pair. */
@@ -211,7 +210,6 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
   .hq-roof { flex-wrap: wrap; align-content: center; gap: 6px 12px; padding: 12px var(--gap); }
   .hq-brand { font-size: 16px; } .hq-logo { width: 22px; height: 22px; font-size: 13px; }
   .hq-greeting { font-size: 16px; flex: 1; }
-  .hq-people { display: none; }
   .hq-days { width: 100%; } .hq-days .px-btn { padding: 5px 10px; font-size: 13px; }
   .hq-floor { display: flex; flex-direction: column; justify-content: flex-start; align-content: stretch; gap: var(--gap); padding: var(--gap); overflow: hidden; }
   .hq-office { order: 2; flex: none; height: var(--oh); }
@@ -285,3 +283,20 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
   .office-scroll { height: auto; }
   .office-details, .office-relationships { position: static; width: 100%; max-width: none; max-height: none; margin-top: 4px; }
 }
+
+/* "N people working" note on the wall under Sales. */
+.office-roster { position: absolute; left: 37.5%; bottom: calc(-1 * var(--frame)); transform: translate(-50%, 50%); z-index: 11; pointer-events: none; font: 600 clamp(9px, 1vw, 12px)/1 var(--font-sans); color: #c8d3de; white-space: nowrap; }
+.board-expanded .board-cork { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); grid-auto-rows: auto; }
+.board-expanded .board-empty { grid-column: 1 / -1; }
+.board-expanded .note-px { min-height: 104px; }
+
+@media (max-width: 900px) {
+  .board-expanded .board-cork { gap: 13px; padding: 12px 10px; }
+  .board-expanded .note-px { justify-content: flex-start; gap: 12px; min-height: 90px; }
+  .board-expanded .note-title { display: block; overflow: visible; }
+  .board-expanded .pin { display: block; }
+}
+
+/* Remote staff stay at their desks, slightly faded. */
+.office .is-remote { opacity: .7; }
+.remote-tag { font-weight: 400; opacity: .85; }

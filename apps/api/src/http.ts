@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { validator } from "hono-openapi";
 import type { z } from "zod";
 
 export class HttpError extends Error {
@@ -8,17 +9,21 @@ export class HttpError extends Error {
   }
 }
 
-export async function readBody<T>(c: Context, schema: z.ZodType<T>): Promise<T> {
+export async function requireJson(c: Context, next: Next) {
   const mediaType = c.req.header("content-type")?.split(";")[0]?.trim().toLowerCase();
   if (mediaType !== "application/json") {
     throw new HttpError(415, "Send the request body as application/json.");
   }
-  const raw = await c.req.json().catch(() => {
+  await c.req.json().catch(() => {
     throw new HttpError(400, "Request body must be JSON.");
   });
-  const parsed = schema.safeParse(raw);
-  if (!parsed.success) throw new HttpError(400, parsed.error.issues.map((i) => i.message).join("; "));
-  return parsed.data;
+  await next();
+}
+
+export function validateJson<Schema extends z.ZodType>(schema: Schema) {
+  return validator("json", schema, (result) => {
+    if (!result.success) throw new HttpError(400, result.error.map((issue) => issue.message).join("; "));
+  });
 }
 
 export function handleError(error: Error, c: Context) {

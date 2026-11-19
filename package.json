@@ -19,11 +19,13 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.122",
     "@ai-sdk/react": "4.0.180",
+    "@scalar/hono-api-reference": "^0.12.22",
     "@tursodatabase/database": "^0.8.3",
     "ai": "^7.0.173",
     "exceljs": "^4.4.0",
     "fflate": "^0.8.3",
     "hono": "^4.13.19",
+    "hono-openapi": "^1.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "unpdf": "^2.2.1",
