@@ -23,7 +23,7 @@ export function SignalButtons({ id, name, indicator, style, active, onHover, onF
   onDismiss: () => void
 }) {
   if (!indicator?.status && !indicator?.requests.length) return null
-  const button = (kind: Signal['kind'], icon: string, label: string) => {
+  const button = (kind: Signal['kind'], icon: string, label: string, count = 1) => {
     const signal = { id, kind }
     const expanded = active?.id === id && active.kind === kind
     return <button type="button" className="office-signal" aria-label={`${name}: ${label}`}
@@ -33,11 +33,12 @@ export function SignalButtons({ id, name, indicator, style, active, onHover, onF
       onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) onFocus(signal) }} onBlur={() => onFocus(null)} onClick={() => onToggle(signal)}
       onKeyDown={(event) => { if (event.key === 'Escape') onDismiss() }}>
       <span aria-hidden>{icon}</span>
+      {count > 1 && <span className="office-signal-count" aria-hidden>×{count}</span>}
     </button>
   }
   return <div className="office-signals" style={style}>
     {indicator.status && button('status', statusIcons[indicator.status.kind], statusNames[indicator.status.kind])}
-    {indicator.requests.length > 0 && button('requests', '✋', 'Request for the CEO')}
+    {indicator.requests.length > 0 && button('requests', '✋', indicator.requests.length > 1 ? `${indicator.requests.length} requests for the CEO` : 'Request for the CEO', indicator.requests.length)}
   </div>
 }
 

@@ -20,8 +20,9 @@ const OPEN_ITEMS = [
   { from: "VX006", to: "VX004", file: "/05.eml", corroboration: "v3 launch kit has been ready since July, just waiting on engineering", anchor: "Just need a date from engineering", label: "Launch kit waits for a date", topic: /(?:atlas launch|launch date)/, closed: /(?:date confirmed|launch cancelled|atlas launched)/i },
 ] as const;
 
-const note = (row: EvidenceRow, label: string, date: string): Fact =>
+const noteFact = (row: EvidenceRow, label: string, date: string): Fact =>
   ({ label, date, evidence: { id: row.id, path: row.path } });
+const note = noteFact;
 
 const dateAge = (day: string, then: string) => (Date.parse(day) - Date.parse(then)) / 86_400_000;
 const OPEN_TICKET = /^(?:to do|open|in progress|blocked|reopened|backlog|in review)$/i;
@@ -35,8 +36,13 @@ function workStatus(rows: EvidenceRow[], cutoff: string, aliases: string[], init
   const candidates: Status[] = [];
   for (const row of rows) {
     const fields = evidenceFields(row);
-    const date = workDate(row, cutoff);
-    if (!date) continue;
+    const recorded = workDate(row, cutoff);
+    const datedAfterCutoff = !recorded && !!recordDay(fields.Resolved || fields.Updated || fields.Created || fields.committed_at || fields.Opened || fields["Week of"] || fields.From);
+    if (datedAfterCutoff) continue;
+    // Records without a reliable date are aged from the day their pack was released.
+    const date = recorded ?? row.released_at.slice(0, 10);
+    const note = (row: EvidenceRow, label: string, date: string) =>
+      noteFact(row, recorded ? label : `${label} (date unknown, released ${date})`, date);
     if (fields.Employee && /Leave_Register/.test(row.path) && isPerson(fields.Employee) && day <= (recordDay(fields.To) ?? date)) {
       candidates.push({ ...note(row, "Recorded leave", date), kind: "leave" });
     }

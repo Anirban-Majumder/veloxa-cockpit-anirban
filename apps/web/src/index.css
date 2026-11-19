@@ -264,8 +264,9 @@ body { background: #0f151d; color: var(--color-ink); font-family: var(--font-san
 .office-lines .report-line { stroke: #a7edff; stroke-dasharray: 5 4; }
 .office-lines .open-line { stroke: #ffb894; stroke-dasharray: 3 3; }
 .office-signals { position: absolute; z-index: 1000; display: flex; gap: 2px; }
-.office-signal { display: grid; place-items: center; width: clamp(24px, 3.4cqw, 28px); height: clamp(24px, 3.4cqw, 28px); border: 1px solid #1b2430; border-radius: 4px; background: #fff1b9; color: #1b2430; font: 700 clamp(11px, 2.4cqw, 17px)/1 var(--font-sans); cursor: pointer; }
+.office-signal { display: grid; place-items: center; width: clamp(24px, 3.4cqw, 28px); height: clamp(24px, 3.4cqw, 28px); border: 1px solid #1b2430; border-radius: 4px; background: #fff1b9; color: #1b2430; font: 700 clamp(11px, 2.4cqw, 17px)/1 var(--font-sans); cursor: pointer; position: relative; }
 .office-signal:focus-visible { outline: 2px solid #a7edff; outline-offset: 1px; }
+.office-signal-count { position: absolute; top: -6px; right: -8px; padding: 1px 3px; border-radius: 6px; background: #1b2430; color: #fff1b9; font: 700 9px/1 var(--font-sans); }
 .office-details, .office-relationships { position: absolute; inset: auto 4px 4px; z-index: 10; width: fit-content; max-width: calc(100% - 8px); max-height: min(72%, 16rem); overflow: auto; padding: 7px 10px; border: 1px solid #687a8f; border-radius: 4px; background: #182330f5; color: #f4f1e8; font: 500 12px/1.35 var(--font-sans); }
 .office-details { pointer-events: auto; }
 .office-details li { margin-top: 4px; }
