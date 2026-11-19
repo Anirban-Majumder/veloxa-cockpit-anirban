@@ -23,7 +23,7 @@ beforeAll(async () => {
 });
 
 test("point-in-time parsing uses IST end of day and only narrows the selected release", () => {
-  for (const date of ["18 Nov", "Nov 18", "18/11", "2026-11-18", "on 18th November", "by Wednesday", "yesterday"]) {
+  for (const date of ["as of 18 Nov", "by Nov 18", "on 18/11", "as of 2026-11-18", "on 18th November", "by Wednesday", "as of yesterday", "until the 18 Nov"]) {
     expect(pointInTime(`What did we know ${date}?`, thursday)).toEqual({
       cutoff: "2026-11-18T23:59:59.999+05:30", asOf: "2026-11-18", historyThrough: "2026-11-18T18:29:59.999Z",
     });
@@ -36,7 +36,12 @@ test("point-in-time parsing uses IST end of day and only narrows the selected re
   expect(pointInTime("as of 2026/01/02", wednesday).asOf).toBeUndefined();
   expect(pointInTime("as of 11/12/26", wednesday).asOf).toBeUndefined();
   expect(pointInTime("as of 03/04", wednesday).asOf).toBe("2026-04-03");
-  expect(pointInTime("Compare 18 Nov with 16 Nov", thursday).cutoff).toBe("2026-11-16T23:59:59.999+05:30");
+  expect(pointInTime("Compare on 18 Nov with on 16 Nov", thursday).cutoff).toBe("2026-11-16T23:59:59.999+05:30");
+  for (const bare of ["What happened 18 Nov?", "the 18/11 incident", "Nov 18 launch", "yesterday's standup", "last Monday", "support is 24/7", "about 1/2 the team"]) {
+    expect(pointInTime(bare, thursday)).toEqual({ cutoff: thursday, asOf: undefined, historyThrough: undefined });
+  }
+  expect(pointInTime("as of 24/7", thursday).asOf).toBe("2026-07-24");
+  expect(pointInTime("as of 1/ 2", thursday).asOf).toBeUndefined();
 });
 
 test("mail envelopes, pay restrictions and released sources also scope the working brief", async () => {

@@ -14,13 +14,16 @@ const isoDay = (value: Date) => value.toISOString().slice(0, 10);
 
 export function pointInTime(question: string, selected: string) {
   const reference = new Date(`${selected.slice(0, 10)}T00:00:00Z`);
-  const dates: string[] = [];
-  const explicitCutoffs: string[] = [];
+  const cutoffDays: string[] = [];
+  const onDays: string[] = [];
   for (const match of question.matchAll(DATE)) {
     const g = match.groups!;
     const prefix = question.slice(0, match.index);
     if ((g.weekday || g.relative) && /\bnext\s+$/i.test(prefix)) continue;
-    const candidates = /\b(?:as of|by)\s+$/i.test(prefix) ? explicitCutoffs : dates;
+    // A date narrows the cutoff only after a cue word; bare dates ("the 18/11 incident") are ignored.
+    const candidates = /\b(?:as of|as at|by|until|till)\s+(?:the\s+)?$/i.test(prefix) ? cutoffDays
+      : /\bon\s+(?:the\s+)?$/i.test(prefix) ? onDays : undefined;
+    if (!candidates) continue;
     if (g.relative || g.weekday) {
       const date = new Date(reference);
       const weekday = WEEKDAYS.indexOf(g.weekday?.toLowerCase() ?? "");
@@ -41,7 +44,7 @@ export function pointInTime(question: string, selected: string) {
     const instant = new Date(`${date}T00:00:00Z`);
     if (Number.isFinite(+instant) && isoDay(instant) === date) candidates.push(date);
   }
-  const requestedDay = (explicitCutoffs.length ? explicitCutoffs : dates).sort()[0];
+  const requestedDay = (cutoffDays.length ? cutoffDays : onDays).sort()[0];
   const end = requestedDay && `${requestedDay}T23:59:59.999+05:30`;
   const cutoff = end && Date.parse(end) < Date.parse(selected) ? end : selected;
   const asOf = requestedDay ? cutoff.slice(0, 10) : undefined;
