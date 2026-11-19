@@ -42,7 +42,25 @@ export function selectAll<T>(db: Db, sql: string, ...params: Param[]): Promise<T
   return exclusive(async () => (await (await db.prepare(sql)).all(...params)) as T[]);
 }
 
-export function execute(db: Db, sql: string, ...params: Param[]): Promise<void> {
+type StatementBatch = { statements: string[]; atomic: boolean; readOnly: boolean };
+
+export function execute(db: Db, sql: string, ...params: Param[]): Promise<void>;
+export function execute(db: Db, batch: StatementBatch): ReturnType<Db["batch"]>;
+export function execute(db: Db, sql: string | StatementBatch, ...params: Param[]) {
+  if (typeof sql !== "string") {
+    return exclusive(async () => {
+      const options = { raw: true, mode: sql.atomic ? "deferred" : undefined };
+      if (!sql.readOnly) return db.batch(sql.statements, options);
+
+      // query_only is connection-wide, so keep the queue until it is restored.
+      await db.exec("PRAGMA query_only = 1");
+      try {
+        return await db.batch(sql.statements, options);
+      } finally {
+        await db.exec("PRAGMA query_only = 0");
+      }
+    });
+  }
   return exclusive(async () => {
     await (await db.prepare(sql)).run(...params);
   });
