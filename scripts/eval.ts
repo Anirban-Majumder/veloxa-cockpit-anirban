@@ -31,7 +31,7 @@ try {
     const agent = question.agent ? await findAgent(db, question.agent, cutoff) : undefined;
     if (question.agent && !agent) throw new Error(`Agent unavailable at ${cutoff}`);
     const { chatAgent, sources } = await prepareChat(db, cutoff, agent, { mustSearch: true });
-    const result = await chatAgent.generate({ prompt: question.text, abortSignal: AbortSignal.timeout(45_000) });
+    const result = await chatAgent.generate({ prompt: question.text, abortSignal: AbortSignal.timeout(Number(process.env.EVAL_TIMEOUT_MS ?? 120_000)) });
     const rows = await scopedEvidence(db, cutoff, agent);
     const shown = new Set(sources.map((source) => source.id));
     for (const step of result.steps) {
