@@ -13,7 +13,8 @@
     "ingest": "bun scripts/ingest.ts",
     "api": "bun --watch apps/api/src/index.ts",
     "dev:web": "bun --bun vite --config apps/web/vite.config.ts",
-    "test": "bun test tests"
+    "test": "bun test tests",
+    "eval": "bun scripts/eval.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.122",
