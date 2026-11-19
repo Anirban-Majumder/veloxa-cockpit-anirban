@@ -330,3 +330,13 @@ Status: confirmed by the owner.
 Why: individual pay is restricted by the CFO (T2). Later material must not leak into earlier answers (hackathon must-have 5). An agent knowing other people's email would make the 14 people inconsistent with the records. For T6c, there is no Slack export or endpoint access in any release, and a Slack workspace is mostly bot logs, alerts and chit-chat, too large and noisy to judge who might quit.
 
 Rules that sit in code, not in the prompt, hold even if the model ignores instructions. The prompt-only rule (not inventing) is the weakest and is checked only by the eval.
+
+### D039 — Incremental concerns
+
+Status: implemented.
+
+Update the previous briefing using newly released evidence and a bounded set of related older rows. The first briefing uses the full evidence pack.
+
+Why: sending the full history makes daily token cost grow with every release.
+
+Trade-off: an early mistake can carry forward. Each run re-checks cited rows against their full text.

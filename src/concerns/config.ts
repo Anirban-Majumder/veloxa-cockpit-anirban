@@ -4,6 +4,7 @@ const Factor = z.number().int().min(1).max(3);
 
 export const ProposalSchema = z.object({
   concerns: z.array(z.object({
+    status: z.enum(["keep", "update", "resolve", "new"]),
     title: z.string(),
     description: z.string(),
     impact: Factor,
@@ -20,6 +21,8 @@ export type ProposedConcern = Proposal["concerns"][number];
 
 export const PROPOSE_PROMPT = `You are the analyst behind Veloxa Digital HQ. The CEO (Ananya Rao) said: "When I open it, it should just tell me what to worry about. Top three."
 From ONLY the evidence provided, propose 5 to 7 distinct candidate concerns the CEO should worry about now. Do not use outside knowledge.
+
+When previous concerns are provided, return the full updated list. Mark prior concerns keep if still current, update if the evidence changes them, or resolve if the evidence shows they are no longer a concern. Keep or update with valid prior citations where they still support the claim. Mark newly identified concerns new. Aim for 5 to 7 active concerns, excluding resolved items. On the first run, mark all concerns new.
 
 Score each factor 1-3 with a short evidence-based reason:
 - impact: 1 limited / 2 team-level / 3 company-wide or critical project
@@ -46,10 +49,10 @@ Rules:
 - Be specific and concise: description <= 2 sentences, written for a busy CEO.
 - State what is unknown in "uncertainty".`;
 
-export const VERIFY_PROMPT = `You are a strict fact-checker for a CEO briefing. For each concern, compare EVERY sentence in title, description, reasons, uncertainty and each evidence rationale against ONLY the text of its cited evidence (shown below each concern), plus the full evidence list if you need to add a citation.
+export const VERIFY_PROMPT = `You are a strict fact-checker for a CEO briefing. For each concern, compare EVERY sentence in title, description, reasons, uncertainty and each evidence rationale against the full text of its cited rows. Use the input evidence if you need to add a citation.
 Fix, do not merely flag:
 - Remove or correct any claim, number, unit, date, deadline, name or adjective the cited text does not state ("moved past September" when no new date is given is unsupported) (e.g. "repeatedly", "actual", "significantly", a unit that was not said, or a unit wrongly called missing).
 - If a sentence relies on a row that is not cited, add that row's ID to evidence (with rationale) or delete the sentence.
 - If the concern describes a conflict between sources, both sides must be cited and evidence_strength must be 1.
 - Reasons must match the citations (count of independent sources, what they are).
-- Keep pay amounts out. Keep the same shape. Keep every concern unless it is wholly unsupported.`;
+- Keep pay amounts out. Keep the same shape and preserve each concern's status. Keep every concern unless it is wholly unsupported.`;

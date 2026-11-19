@@ -7,8 +7,10 @@ const MAX_TABLE_ROWS = 40;
 export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack: string; ids: Set<number> }> {
   // No derived payroll totals are emitted: month-over-month totals let one joiner's pay be recovered by subtraction (A002).
   const visible = await evidenceAtCutoff(db, cutoff);
-  const ids = new Set(visible.map((r) => r.id));
+  return { pack: formatEvidencePack(visible), ids: new Set(visible.map((r) => r.id)) };
+}
 
+export function formatEvidencePack(visible: EvidenceRow[]): string {
   const parts: string[] = [];
   for (const [key, rows] of groupBySource(visible)) {
     const first = rows[0]!;
@@ -22,7 +24,7 @@ export async function buildEvidencePack(db: Db, cutoff: string): Promise<{ pack:
     }
   }
 
-  return { pack: parts.join("\n"), ids };
+  return parts.join("\n");
 }
 
 /** Tables too large to read row by row, keyed like "path [sheet]", each with its deterministic summary. */

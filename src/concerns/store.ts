@@ -56,6 +56,15 @@ export async function hasConcerns(db: Db, cutoff: string): Promise<boolean> {
   return !!(await selectOne(db, "SELECT 1 FROM concerns WHERE knowledge_cutoff = ? LIMIT 1", cutoff));
 }
 
+export function previousConcerns(db: Db, cutoff: string) {
+  return transaction(db, async () => {
+    const previous = await selectOne<{ cutoff: string }>(db,
+      "SELECT knowledge_cutoff AS cutoff FROM concerns WHERE knowledge_cutoff < ? ORDER BY knowledge_cutoff DESC LIMIT 1", cutoff);
+    if (!previous) return undefined;
+    return { cutoff: previous.cutoff, concerns: await readTopConcerns(db, previous.cutoff, -1) };
+  });
+}
+
 /** Released cutoffs only, newest first. */
 export async function concernCutoffs(db: Db): Promise<string[]> {
   const rows = await selectAll<{ cutoff: string }>(db,

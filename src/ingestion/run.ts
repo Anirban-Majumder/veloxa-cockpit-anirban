@@ -37,7 +37,7 @@ export function resolveDays(day?: number) {
   return { upTo, selected: releases.filter((r) => r.day <= upTo) };
 }
 
-/** Ingests days 1..N, then (optionally) generates the top concerns for the last day's cutoff. */
+/** Ingests days 1..N, then optionally generates concern snapshots in release order. */
 export async function runIngest(db: Db, opts: IngestOptions, log: (line: string) => void): Promise<IngestResult> {
   const { upTo, selected } = resolveDays(opts.day);
   log(`Releases: ${RELEASE_ROOT}`);
@@ -56,16 +56,23 @@ export async function runIngest(db: Db, opts: IngestOptions, log: (line: string)
   const base = { upTo, cutoff, changedFiles, agents };
   if (opts.concerns === false) return { ...base, concerns: { status: "skipped" } };
 
-  if (!changedFiles && !opts.regen && await hasConcerns(db, cutoff)) {
+  try {
+    let top: IngestResult["concerns"]["top"];
+    let previousChanged = false;
+    for (const { releasedAt } of selected) {
+      if (!opts.regen && !previousChanged && !(releasedAt === cutoff && changedFiles)
+        && await hasConcerns(db, releasedAt)) continue;
+
+      log(`Generating top concerns as of ${releasedAt}…`);
+      const generated = await generateConcerns(db, releasedAt);
+      log(`Stored ${generated.stored} ranked concerns${generated.droppedCitations ? ` (dropped ${generated.droppedCitations} invalid citation(s))` : ""}.`);
+      generated.top.forEach((c, i) => log(`  ${i + 1}. [${c.score}] ${c.title}`));
+      top = generated.top;
+      previousChanged = true;
+    }
+    if (top) return { ...base, concerns: { status: "generated", top } };
     log(`Concerns for ${cutoff} are up to date (pass regen to refresh).`);
     return { ...base, concerns: { status: "up-to-date" } };
-  }
-  log(`Generating top concerns as of ${cutoff}…`);
-  try {
-    const g = await generateConcerns(db, cutoff);
-    log(`Stored ${g.stored} ranked concerns${g.droppedCitations ? ` (dropped ${g.droppedCitations} invalid citation(s))` : ""}.`);
-    g.top.forEach((c, i) => log(`  ${i + 1}. [${c.score}] ${c.title}`));
-    return { ...base, concerns: { status: "generated", top: g.top.map((c) => ({ score: c.score, title: c.title })) } };
   } catch (e) {
     const error = (e as Error).message;
     log(`Concern generation failed: ${error}. Evidence was ingested; retry with regen once the model is reachable.`);

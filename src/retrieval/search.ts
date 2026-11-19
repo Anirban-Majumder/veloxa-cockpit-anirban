@@ -90,8 +90,11 @@ export async function scopedEvidence(db: Db, cutoff: string, agent?: AgentIdenti
  * Keyword retrieval over cutoff-visible evidence (D006). Restricted rows are never returned.
  * For a person agent, only evidence connected to that person is searchable (D008).
  */
-export async function searchEvidence(db: Db, query: string, cutoff: string, opts: { agent?: AgentIdentity; limit?: number } = {}) {
-  const rows = await scopedEvidence(db, cutoff, opts.agent);
+export async function searchEvidence(db: Db, query: string, cutoff: string,
+  opts: { agent?: AgentIdentity; limit?: number; excludeIds?: ReadonlySet<number> } = {}) {
+  const visible = await scopedEvidence(db, cutoff, opts.agent);
+  const { excludeIds } = opts;
+  const rows = excludeIds ? visible.filter((row) => !excludeIds.has(row.id)) : visible;
   const asked = tokenize(query);
   const q = [...new Set([...asked, ...asked.flatMap((t) => MISHEARD[t] ?? [])])];
   const docs = rows.map((r) => ({ r, toks: tokenize(`${r.path} ${r.text}`) }));
