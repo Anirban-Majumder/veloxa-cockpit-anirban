@@ -158,6 +158,8 @@ export default function App() {
             loading={loading && !error}
             empty={emptyBoard}
             onOpen={openConcern}
+            hasMore={concerns.length > 3}
+            onMore={() => setOpen({ kind: 'notice' })}
           />
           <form className="dock" onSubmit={(e) => { e.preventDefault(); void askAnalyst(ask.trim() || undefined) }}>
             <label htmlFor="dock-ask" className="dock-head font-display">Ask Veloxa Digital HQ</label>

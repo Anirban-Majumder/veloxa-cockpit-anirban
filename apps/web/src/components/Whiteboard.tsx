@@ -4,8 +4,10 @@ import type { Concern } from '../lib/api'
 const URGENCY = ['', 'Watch', 'This week', 'Today'] as const
 const NOTE = ['note-1', 'note-2', 'note-3']
 
-export function Whiteboard({ concerns, loading, empty, onOpen, expanded = false }: {
+export function Whiteboard({ concerns, loading, empty, onOpen, expanded = false, hasMore = false, onMore }: {
   concerns: Concern[]; loading: boolean; empty?: string; onOpen: (c: Concern) => void; expanded?: boolean
+  /** Main-page board only: more concerns exist than are pinned here. */
+  hasMore?: boolean; onMore?: () => void
 }) {
   const [limit, setLimit] = useState(6)
   const cork = useRef<HTMLDivElement>(null)
@@ -24,6 +26,9 @@ export function Whiteboard({ concerns, loading, empty, onOpen, expanded = false 
         {!loading && concerns.length === 0 && <p className="board-empty">{empty ?? 'Nothing pinned for this date yet.'}</p>}
         {visible.map((c, index) => <Note key={c.id} c={c} big={!expanded && index === 0} onOpen={onOpen} />)}
       </div>
+      {!expanded && hasMore && onMore && <div className="board-foot">
+        <button type="button" className="px-btn" onClick={onMore}>Load more</button>
+      </div>}
       {expanded && limit < concerns.length && <div className="board-foot">
         <button type="button" className="px-btn" onClick={() => setLimit((current) => current + 6)}>Load more</button>
       </div>}
