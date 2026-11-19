@@ -2,6 +2,7 @@ import { selectOne, type Db } from "../db/client";
 import { generateConcerns } from "../concerns/generate";
 import { hasConcerns } from "../concerns/store";
 import { ingestRelease } from "./ingest";
+import { ingestSouls } from "./souls";
 import { discoverReleases, isReleased, RELEASE_ROOT } from "./releases";
 
 export interface IngestOptions {
@@ -47,6 +48,7 @@ export async function runIngest(db: Db, opts: IngestOptions, log: (line: string)
     log(`Day ${r.day} (${r.folder}): ${res.added} new file(s), ${res.evidence} evidence rows, ${res.unchanged} unchanged` +
       (res.skipped.length ? `, skipped unsupported: ${res.skipped.join(", ")}` : ""));
   }
+  await ingestSouls(db, log);
   const agents = (await selectOne<{ n: number }>(db, "SELECT COUNT(*) AS n FROM agents"))!.n;
   log(`Agents: ${agents} profile(s)`);
 

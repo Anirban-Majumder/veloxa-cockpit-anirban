@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { Agent } from "../agents/store";
 import type { Db } from "../db/client";
+import { evidenceRef } from "../retrieval/person-brief";
 import { searchEvidence } from "../retrieval/search";
 import { PASSAGE_LENGTH, SEARCH_LIMIT } from "./config";
 
@@ -22,13 +23,7 @@ export function searchEvidenceTool({ db, cutoff, agent }: SearchScope) {
     }),
     execute: async ({ query }) => {
       const rows = await searchEvidence(db, query, cutoff, { agent, limit: agent ? SEARCH_LIMIT.person : SEARCH_LIMIT.analyst });
-      return rows.map((row) => ({
-        id: row.id,
-        path: row.path,
-        released_at: row.released_at,
-        locator: JSON.parse(row.locator_json) as Record<string, unknown>,
-        text: row.text.slice(0, PASSAGE_LENGTH),
-      }));
+      return rows.map((row) => evidenceRef(row, PASSAGE_LENGTH));
     },
   });
 }

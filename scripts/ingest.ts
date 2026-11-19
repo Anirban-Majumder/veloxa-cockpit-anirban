@@ -19,7 +19,10 @@ interface Job { id: string; status: "running" | "done" | "failed"; log: string[]
 type ApiReply = { status: number; body: { job?: Job; error?: string } };
 
 const options = parseArgs(process.argv.slice(2));
-const api = await runningApi();
+const api = await runningApi().catch((error: Error) => {
+  console.error(error.message);
+  process.exit(1);
+});
 const ok = api?.database !== DB_PATH ? await ingestHere(options) : await ingestThroughApi(api, options);
 process.exit(ok ? 0 : 1);
 
@@ -40,8 +43,19 @@ function parseArgs(args: string[]): IngestOptions {
 
 interface ApiStatus { database?: string; releaseRoot?: string }
 
-function runningApi(): Promise<ApiStatus | undefined> {
-  return fetch(`${API}/api/status`).then((res) => res.json() as Promise<ApiStatus>, () => undefined);
+async function runningApi(): Promise<ApiStatus | undefined> {
+  const res = await fetch(`${API}/api/status`, { headers: apiHeaders(), redirect: "manual" }).catch(() => undefined);
+  if (!res) return undefined;
+  if (res.status === 401) throw new Error("The running API rejected authentication. Set VELOXA_PASSPHRASE to match the API.");
+  if (!res.ok) throw new Error(`The running API returned ${res.status} for /api/status.`);
+  return res.json() as Promise<ApiStatus>;
+}
+
+function apiHeaders(init?: RequestInit["headers"]) {
+  const headers = new Headers(init);
+  const passphrase = process.env.VELOXA_PASSPHRASE;
+  if (passphrase) headers.set("x-veloxa-passphrase", passphrase);
+  return headers;
 }
 
 async function ingestHere(opts: IngestOptions): Promise<boolean> {
@@ -90,7 +104,7 @@ async function ingestThroughApi(api: ApiStatus, opts: IngestOptions): Promise<bo
 
 async function call(path: string, init?: RequestInit): Promise<ApiReply> {
   try {
-    const res = await fetch(API + path, init);
+    const res = await fetch(API + path, { ...init, headers: apiHeaders(init?.headers), redirect: "error" });
     return { status: res.status, body: (await res.json().catch(() => ({}))) as ApiReply["body"] };
   } catch {
     return { status: 0, body: { error: `Lost contact with the API at ${API}.` } };

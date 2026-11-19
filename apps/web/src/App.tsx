@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, dayLabel, type Agent, type Concern, type Status } from './lib/api'
+import { api, dayLabel, type Agent, type OfficeData, type Concern, type Status } from './lib/api'
 import { Whiteboard } from './components/Whiteboard'
 import { ConcernDetail } from './components/ConcernDetail'
 import { Office } from './components/Office'
@@ -25,8 +25,9 @@ function greeting() {
 }
 
 export default function App() {
+  const [authEnabled, setAuthEnabled] = useState(false)
   const [status, setStatus] = useState<Status | null>(null)
-  const [agents, setAgents] = useState<Agent[]>([])
+  const [office, setOffice] = useState<{ cutoff: string; data: OfficeData } | null>(null)
   const [cutoff, setCutoff] = useState<string | null>(null)
   const [board, setBoard] = useState<{ cutoff: string; concerns: Concern[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,16 +39,17 @@ export default function App() {
   const voice = useDictation(setAsk)
 
   useEffect(() => {
+    api.session().then(({ enabled }) => setAuthEnabled(enabled)).catch(() => {})
     api.status()
       .then((s) => { setStatus(s); setCutoff(s.releases.at(-1)?.released_at ?? null) })
-      .catch(() => setError('The cockpit server isn’t running. Start it with `bun run dev`.'))
+      .catch(() => setError('The Veloxa Digital HQ server isn’t running. Start it with `bun run dev`.'))
   }, [])
 
   useEffect(() => {
     if (!cutoff) return
     let current = true
-    api.agents(cutoff)
-      .then((a) => current && setAgents(a))
+    api.office(cutoff)
+      .then((data) => current && setOffice({ cutoff, data }))
       .catch((e: Error) => current && setError(e.message))
     api.concerns(cutoff)
       .then((d) => current && setBoard({ cutoff, concerns: d.concerns }))
@@ -55,8 +57,18 @@ export default function App() {
     return () => { current = false }
   }, [cutoff])
 
+  const agents = office && office.cutoff === cutoff ? office.data.agents : []
   const loading = !!cutoff && board?.cutoff !== cutoff
   const concerns = useMemo(() => (board?.cutoff === cutoff ? board.concerns : []), [board, cutoff])
+
+  const logout = async () => {
+    try {
+      await api.logout()
+      window.location.replace('/login')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
 
   const chooseDay = (releasedAt: string) => {
     setCutoff(releasedAt)
@@ -102,7 +114,7 @@ export default function App() {
       <header className="hq-roof">
         <div className="hq-brand">
           <span className="hq-logo" aria-hidden>▚</span>
-          <span className="font-display">Veloxa <b>HQ</b></span>
+          <span className="font-display">Veloxa Digital <b>HQ</b></span>
         </div>
         <h1 className="hq-greeting font-display">{greeting()}</h1>
         {agents.length > 0 && <span className="hq-people"><span className="live-dot" aria-hidden /> {agents.length} in the office</span>}
@@ -121,6 +133,7 @@ export default function App() {
             })}
           </fieldset>
         )}
+        {authEnabled && <button type="button" className="px-btn" onClick={() => void logout()}>Sign out</button>}
       </header>
 
       {error && <p role="alert" className="hq-error">{error}</p>}
@@ -128,7 +141,8 @@ export default function App() {
       <main className="hq-floor">
         <div className="hq-office">
           <Office
-            agents={agents}
+            key={cutoff}
+            data={office?.cutoff === cutoff ? office?.data : undefined}
             alerts={concerns.length}
             selected={open?.kind === 'person' ? open.agent.employee_id : undefined}
             onOpen={(a) => setOpen({ kind: 'person', agent: a })}
@@ -143,7 +157,7 @@ export default function App() {
             onOpen={(c) => setOpen({ kind: 'concern', concern: c })}
           />
           <form className="dock" onSubmit={(e) => { e.preventDefault(); void askAnalyst(ask.trim() || undefined) }}>
-            <label htmlFor="dock-ask" className="dock-head font-display">Ask the cockpit</label>
+            <label htmlFor="dock-ask" className="dock-head font-display">Ask Veloxa Digital HQ</label>
             <div className="dock-row">
               <textarea
                 id="dock-ask"
@@ -184,7 +198,7 @@ export default function App() {
       {open?.kind === 'analyst' && cutoff && analystConversation !== null && (
         <Panel title="Ask about Veloxa" subtitle={`Using what we knew on ${dayLabel(cutoff)}`} onClose={close} footer={footer}
           actions={<button type="button" className="px-btn" onClick={() => void clearChat()}>Clear chat</button>}>
-          <Chat key={`analyst-${analystConversation}-${cutoff}`} agent="analyst" cutoff={cutoff} conversation={analystConversation} speaker="Cockpit"
+          <Chat key={`analyst-${analystConversation}-${cutoff}`} agent="analyst" cutoff={cutoff} conversation={analystConversation} speaker="Veloxa Digital HQ"
             suggestions={SUGGESTIONS} initialQuestion={open.question?.cutoff === cutoff ? open.question.text : undefined} onFooter={setFooter} />
         </Panel>
       )}

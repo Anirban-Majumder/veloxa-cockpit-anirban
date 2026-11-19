@@ -36,6 +36,25 @@ export interface Agent {
   exit_date: string | null
 }
 
+export interface OfficeFact {
+  label: string
+  date: string
+  evidence: { id: number; path: string }
+}
+
+export interface OfficeIndicator {
+  status?: OfficeFact & { kind: 'leave' | 'on-call' | 'open' | 'recent' }
+  requests: (OfficeFact & { response: string })[]
+}
+
+export interface OfficeData {
+  agents: Agent[]
+  names: Record<string, string>
+  reporting: { from: string; to: string }[]
+  openItems: (OfficeFact & { from: string; to: string })[]
+  indicators: Record<string, OfficeIndicator>
+}
+
 export interface Status {
   releases: { day: number; released_at: string }[]
   concernCutoffs: string[]
@@ -45,13 +64,14 @@ export interface Status {
   model: string | null
 }
 
-export type ChatMessage = UIMessage<never, never, {
+export type ChatMessage = UIMessage<{ asOf?: string; briefSources?: EvidenceRef[] }, never, {
   search_evidence: { input: { query: string }; output: EvidenceRef[] }
   summarize_table: { input: { table: string }; output: { id: string; table: string; summary: string } }
 }>
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init)
+  if (res.status === 401) window.location.replace('/login')
   const body = await res.json().catch(() => ({ error: `Server returned ${res.status}` }))
   if (!res.ok) throw new Error(body.error ?? `Server returned ${res.status}`)
   return body as T
@@ -61,8 +81,10 @@ const chatUrl = (agent: string, cutoff?: string, conversation?: number) =>
   `/api/chat?${new URLSearchParams({ agent, ...(cutoff && { cutoff }), ...(conversation && { conversation: String(conversation) }) })}`
 
 export const api = {
+  session: () => request<{ enabled: boolean }>('/api/session'),
+  logout: () => request<{ ok: boolean }>('/api/logout', { method: 'POST' }),
   status: () => request<Status>('/api/status'),
-  agents: (cutoff: string) => request<Agent[]>(`/api/agents?cutoff=${encodeURIComponent(cutoff)}`),
+  office: (cutoff: string) => request<OfficeData>(`/api/agents/office?cutoff=${encodeURIComponent(cutoff)}`),
   concerns: (cutoff: string) =>
     request<{ cutoff: string | null; concerns: Concern[] }>(`/api/concerns?cutoff=${encodeURIComponent(cutoff)}`),
   chatHistory: (agent: string, cutoff: string, conversation?: number) =>

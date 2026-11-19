@@ -31,7 +31,7 @@ const nikhil = (changes: Record<string, string>) => ({
 beforeAll(async () => {
   db = await openDb(":memory:");
   await ingestRelease(db, discoverReleases().find((r) => r.day === 1)!);
-  await addEmployeeExport(AFTER_REORG, [nikhil({ "Manager ID": "VX020", "Department": "Revenue" })]);
+  await addEmployeeExport(AFTER_REORG, [nikhil({ "Manager ID": "VX020", "Department": "Revenue", "Work Email": "nikhil.bose@veloxa.in" })]);
   await addEmployeeExport(AFTER_EXIT, [nikhil({ "Manager ID": "VX020", "Department": "Revenue", "Status": "Exited", "Exit Date": "2027-01-08" })]);
 });
 
@@ -41,8 +41,8 @@ describe("agents follow the selected day", () => {
   });
 
   test("a reorg shows only from the release that recorded it", async () => {
-    expect(await findAgent(db, "VX006", DAY_3)).toMatchObject({ department: "Marketing", manager_id: "VX001" });
-    expect(await findAgent(db, "VX006", AFTER_REORG)).toMatchObject({ department: "Revenue", manager_id: "VX020" });
+    expect(await findAgent(db, "VX006", DAY_3)).toMatchObject({ department: "Marketing", manager_id: "VX001", work_email: "nikhil@veloxa.in" });
+    expect(await findAgent(db, "VX006", AFTER_REORG)).toMatchObject({ department: "Revenue", manager_id: "VX020", work_email: "nikhil.bose@veloxa.in" });
   });
 
   test("someone serving notice stays; after their last working day they are hidden", async () => {

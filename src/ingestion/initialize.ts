@@ -2,6 +2,7 @@ import { generateConcerns } from "../concerns/generate";
 import { hasConcerns } from "../concerns/store";
 import { selectOne, type Db } from "../db/client";
 import { ingestRelease, syncAgents } from "./ingest";
+import { ingestSouls } from "./souls";
 import { discoverReleases, isReleased, type Release } from "./releases";
 
 export async function hasDayEvidence(db: Db, day: number): Promise<boolean> {
@@ -22,10 +23,13 @@ export async function initializeData(db: Db, log: (line: string) => void = conso
       log(`Day ${release.day}: importing evidence…`);
       await ingestRelease(db, release);
     }
+  }
+  await syncAgents(db);
+  await ingestSouls(db, log);
+  for (const release of released) {
     if (!await hasConcerns(db, release.releasedAt)) {
       log(`Day ${release.day}: generating missing concerns…`);
       await generateConcerns(db, release.releasedAt);
     }
   }
-  await syncAgents(db);
 }

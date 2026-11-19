@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, type ChatMessage } from '../../lib/api'
 import { Composer } from './Composer'
 import { Message } from './Message'
-import { collectSources } from './sources'
 import { Thinking } from './Thinking'
 
 interface ChatProps {
-  /** Employee ID, or "analyst" for the cockpit. */
+  /** Employee ID, or "analyst" for Veloxa Digital HQ. */
   agent: string
   cutoff: string
   /** Pins this view to one conversation; person chats omit it and continue the latest. */
@@ -50,7 +49,6 @@ function Conversation({ agent, cutoff, conversation, speaker, suggestions, initi
   })
 
   const busy = status === 'submitted' || status === 'streaming'
-  const sources = useMemo(() => collectSources(messages), [messages])
   const end = useRef<HTMLDivElement>(null)
   const askedInitial = useRef(false)
 
@@ -79,7 +77,9 @@ function Conversation({ agent, cutoff, conversation, speaker, suggestions, initi
     )
   }, [agent, speaker, busy]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const lastIsUser = messages.at(-1)?.role === 'user'
+  const last = messages.at(-1)
+  const lastIsUser = last?.role === 'user'
+  const emptyAnswer = !busy && last?.role === 'assistant' && !last.parts.some((part) => part.type === 'text' && part.text.trim())
 
   return (
     <div className="space-y-5" aria-live="polite">
@@ -91,7 +91,6 @@ function Conversation({ agent, cutoff, conversation, speaker, suggestions, initi
           key={message.id}
           message={message}
           speaker={speaker}
-          sources={sources}
           streaming={busy && index === messages.length - 1}
         />
       ))}
@@ -100,9 +99,9 @@ function Conversation({ agent, cutoff, conversation, speaker, suggestions, initi
           <Thinking />
         </div>
       )}
-      {error && (
+      {(error || emptyAnswer) && (
         <p className="flex items-center gap-3 text-alarm">
-          {error.message || 'Something went wrong.'}
+          {error?.message || 'No answer came back.'}
           <button type="button" className="px-btn" onClick={() => void regenerate()}>Try again</button>
         </p>
       )}

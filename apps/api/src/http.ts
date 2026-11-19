@@ -35,6 +35,6 @@ const isAllowedOrigin = (origin: string) => LOCAL_ORIGIN.test(origin) || PUBLIC_
 /** Blocks other websites from triggering paid model calls through the browser; the CLI sends no Origin. */
 export async function rejectForeignOrigins(c: Context, next: Next) {
   const origin = c.req.header("origin");
-  if (c.req.method !== "GET" && origin && !isAllowedOrigin(origin)) throw new HttpError(403, "Cross-origin requests are not allowed.");
+  if (c.req.method !== "GET" && origin && origin !== new URL(c.req.url).origin && !isAllowedOrigin(origin)) throw new HttpError(403, "Cross-origin requests are not allowed.");
   await next();
 }

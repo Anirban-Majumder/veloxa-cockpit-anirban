@@ -53,6 +53,8 @@ describe("pay amounts", () => {
     expect(withholdPay("Burn was ₹42,00,000 in October.")).toBe("Burn was ₹42,00,000 in October.");
     const companyTotal = "Vendor / Payee: Salaries (payroll); Cost Centre: PAYROLL; Amount (Rs.): 3175000";
     expect(withholdPay(companyTotal)).toBe(companyTotal);
+    expect(withholdPay("Monthly salary: 2026")).toBe("Monthly salary: [amount withheld]");
+    expect(withholdPay(companyTotal + "; Rahul's salary: 95000")).not.toContain("95000");
   });
 });
 

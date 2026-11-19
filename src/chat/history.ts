@@ -39,10 +39,11 @@ export async function startConversation(db: Db, agentId: string | null): Promise
 }
 
 /** Messages saved under a later cutoff stay hidden, so memory cannot leak future knowledge. */
-export async function loadMessages(db: Db, conversationId: number, cutoff: string, limit?: number): Promise<ChatMessage[]> {
+export async function loadMessages(db: Db, conversationId: number, cutoff: string, limit?: number, historyThrough?: string): Promise<ChatMessage[]> {
   const rows = await selectAll<MessageRow>(db,
-    "SELECT id, role, content FROM messages WHERE conversation_id = ? AND knowledge_cutoff <= ? ORDER BY id",
-    conversationId, cutoff);
+    `SELECT id, role, content FROM messages
+     WHERE conversation_id = ? AND knowledge_cutoff <= ? AND (? IS NULL OR created_at <= ?) ORDER BY id`,
+    conversationId, cutoff, historyThrough ?? null, historyThrough ?? null);
   const messages = rows.map(toChatMessage).map(withholdPayInSources);
   return limit ? messages.slice(-limit) : messages;
 }
@@ -55,6 +56,12 @@ export async function savedQuestion(db: Db, conversationId: number, questionId: 
      WHERE conversation_id = ? AND role = 'user' AND json_valid(content) AND json_extract(content, '$.message.id') = ?`,
     conversationId, conversationId, questionId);
   return row && { cutoff: row.cutoff, isLatest: !!row.latest };
+}
+
+export async function questionRowId(db: Db, conversationId: number, questionId: string) {
+  return (await selectOne<{ id: number }>(db,
+    `SELECT id FROM messages WHERE conversation_id = ? AND role = 'user'
+     AND json_valid(content) AND json_extract(content, '$.message.id') = ?`, conversationId, questionId))?.id;
 }
 
 /** A retried question is stored once and its new answer replaces the old one; if a newer question arrived meanwhile, the retry is dropped. */
@@ -127,7 +134,8 @@ function withholdPayInSources(message: ChatMessage): ChatMessage {
     }
     return part;
   });
-  return { ...message, parts } as ChatMessage;
+  const briefSources = message.metadata?.briefSources?.map((source) => ({ ...source, text: withholdPay(source.text) }));
+  return { ...message, parts, ...(briefSources && { metadata: { ...message.metadata, briefSources } }) } as ChatMessage;
 }
 
 interface LegacyReply {
@@ -162,4 +170,29 @@ function tryParse(content: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+/** Bound the prompt memory across conversations and exclude legacy answers produced before mail scoping. */
+export async function personConversationSummary(
+  db: Db, agentId: string, cutoff: string, allowed: { id: number }[], beforeMessage = Number.MAX_SAFE_INTEGER, historyThrough?: string,
+): Promise<string> {
+  const cutoffTime = new Date(cutoff).toISOString();
+  const through = historyThrough && historyThrough < cutoffTime ? historyThrough : cutoffTime;
+  const rows = await selectAll<MessageRow>(db,
+    `SELECT m.id, m.role, m.content FROM messages m JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.user_id = 'ceo' AND c.kind = 'person' AND c.agent_id = ?
+       AND m.knowledge_cutoff <= ? AND m.id < ? AND m.created_at <= ?
+     ORDER BY m.id DESC LIMIT ?`,
+    agentId, cutoff, beforeMessage, through, 12);
+  const ids = new Set(allowed.map((row) => row.id));
+  return rows.reverse().flatMap((row) => {
+    const message = toChatMessage(row);
+    const text = message.parts.flatMap((part) => part.type === "text" ? [part.text] : []).join(" ");
+    if (!text) return [];
+    if (message.role === "assistant") {
+      if (!message.metadata?.scoped) return [];
+      if ([...text.matchAll(/\[E(\d+)\]/gi)].some((match) => !ids.has(Number(match[1])))) return [];
+    }
+    return [`${message.role === "user" ? "CEO asked" : "You replied"}: ${withholdPay(text).slice(0, 450)}`];
+  }).join("\n");
 }

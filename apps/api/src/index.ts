@@ -1,31 +1,7 @@
-import { existsSync } from "node:fs";
-import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
-import { compress } from "hono/compress";
 import { modelSettings } from "../../../src/ai/model";
-import { handleError, rejectForeignOrigins } from "./http";
-import { agents } from "./routes/agents";
-import { chat } from "./routes/chat";
-import { concerns } from "./routes/concerns";
-import { ingest } from "./routes/ingest";
-import { status } from "./routes/status";
+import { createApp } from "./app";
 
-const WEB_DIST = "apps/web/dist";
-
-const app = new Hono()
-  .onError(handleError)
-  .use(compress())
-  .use("/api/*", rejectForeignOrigins)
-  .route("/api/status", status)
-  .route("/api/concerns", concerns)
-  .route("/api/agents", agents)
-  .route("/api/chat", chat)
-  .route("/api/ingest", ingest);
-
-if (process.env.NODE_ENV === "production" && existsSync(WEB_DIST)) {
-  app.use("*", serveStatic({ root: WEB_DIST }));
-  app.get("*", serveStatic({ path: `${WEB_DIST}/index.html` }));
-}
+const app = createApp(process.env.VELOXA_PASSPHRASE, process.env.NODE_ENV === "production");
 
 const port = Number(process.env.PORT ?? 8787);
 const hostname = process.env.HOST ?? "127.0.0.1";

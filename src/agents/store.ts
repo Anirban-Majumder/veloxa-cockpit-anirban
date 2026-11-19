@@ -18,10 +18,19 @@ export type AgentProfile = Omit<Agent, "work_email" | "soul">;
 
 /** Each person's latest profile on or before the cutoff; people past their last working day are left out. */
 const AGENTS_AT_CUTOFF = `
-  SELECT a.employee_id, a.full_name, a.work_email, a.join_date, a.soul,
+  SELECT a.employee_id, json_extract(profile.data_json, '$."Full Name"') AS full_name,
+         json_extract(profile.data_json, '$."Work Email"') AS work_email,
+         json_extract(profile.data_json, '$."Join Date"') AS join_date, a.soul,
          p.department, p.title, p.manager_id, p.location, p.status, p.exit_date
   FROM agents a
   JOIN agent_profiles p ON p.employee_id = a.employee_id
+  JOIN evidence profile ON profile.id = (
+    SELECT e.id FROM evidence e JOIN sources s ON s.id = e.source_id
+    WHERE s.released_at = p.effective_from
+      AND json_extract(e.data_json, '$."Emp ID"') = a.employee_id
+      AND json_extract(e.data_json, '$."Full Name"') IS NOT NULL
+    ORDER BY e.id DESC LIMIT 1
+  )
   WHERE p.effective_from = (
           SELECT MAX(effective_from) FROM agent_profiles
           WHERE employee_id = a.employee_id AND effective_from <= ?)

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veloxa Digital HQ</title>
+  <style>
+    :root { color-scheme: dark; font: 1rem system-ui, sans-serif; background: #222e3c; color: #dfe7ee; }
+    body { display: grid; place-items: center; min-height: 100dvh; margin: 0; }
+    main { box-sizing: border-box; width: min(24rem, 92vw); padding: 1.5rem; background: #2c3b4e; border: 2px solid #536478; }
+    h1 { margin: 0 0 1.5rem; font-size: 1.5rem; color: #ffd879; }
+    form { display: grid; gap: .75rem; }
+    input, button { padding: .6rem; font: inherit; }
+    button { cursor: pointer; }
+    p { margin: 0; color: #ffb7b7; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Veloxa Digital HQ</h1>
+    <form method="post" action="/api/login">
+      <label for="passphrase">Passphrase</label>
+      <input id="passphrase" type="password" autocomplete="current-password" required autofocus>
+      <button type="submit">Sign in</button>
+      <p role="alert" hidden></p>
+    </form>
+  </main>
+  <script>
+    const form = document.querySelector('form')
+    const field = document.querySelector('#passphrase')
+    const button = form.querySelector('button')
+    const error = form.querySelector('[role="alert"]')
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      button.disabled = true
+      error.hidden = true
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ passphrase: field.value }),
+        })
+        if (response.ok) {
+          window.location.replace('/')
+          return
+        }
+        const body = await response.json()
+        error.textContent = body.error ?? 'Sign-in failed.'
+      } catch {
+        error.textContent = 'Could not sign in. Try again.'
+      }
+      error.hidden = false
+      button.disabled = false
+      field.focus()
+    })
+  </script>
+</body>
+</html>

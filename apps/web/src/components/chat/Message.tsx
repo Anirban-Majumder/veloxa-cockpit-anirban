@@ -1,14 +1,13 @@
 import type { ChatMessage } from '../../lib/api'
 import { Answer } from './Answer'
-import type { Source } from './sources'
+import { collectSources } from './sources'
 import { SearchStep } from './SearchStep'
 import { TableStep } from './TableStep'
 import { Thinking } from './Thinking'
 
-export function Message({ message, speaker, sources, streaming }: {
+export function Message({ message, speaker, streaming }: {
   message: ChatMessage
   speaker: string
-  sources: Map<string, Source>
   streaming: boolean
 }) {
   if (message.role === 'user') {
@@ -16,7 +15,8 @@ export function Message({ message, speaker, sources, streaming }: {
     return <p className="rise ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-paper">{text}</p>
   }
 
-  const searched = message.parts.some((part) => part.type.startsWith('tool-'))
+  const sources = collectSources(message)
+  const searched = !!message.metadata?.briefSources?.length || message.parts.some((part) => part.type.startsWith('tool-'))
   const lastPart = message.parts.at(-1)
   const waitingAfterTool = streaming && !!lastPart && 'toolCallId' in lastPart && lastPart.state === 'output-available'
   const hasContent = message.parts.some((part) => part.type.startsWith('tool-') || ('text' in part && part.text.trim()))
@@ -25,6 +25,9 @@ export function Message({ message, speaker, sources, streaming }: {
   return (
     <div className="rise max-w-[95%] space-y-3 rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-sm ring-1 ring-ink/5">
       <p className="text-sm font-bold text-ink-soft">{speaker}</p>
+      {message.metadata?.asOf && <p className="w-fit rounded-full bg-route/10 px-2.5 py-1 text-xs font-semibold text-ink">
+        Answering as of {new Date(message.metadata.asOf).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' })}
+      </p>}
       {message.parts.map((part, index) => {
         switch (part.type) {
           case 'text':

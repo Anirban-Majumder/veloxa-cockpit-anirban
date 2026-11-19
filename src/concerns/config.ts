@@ -18,7 +18,7 @@ export const ProposalSchema = z.object({
 export type Proposal = z.infer<typeof ProposalSchema>;
 export type ProposedConcern = Proposal["concerns"][number];
 
-export const PROPOSE_PROMPT = `You are the analyst behind Veloxa's CEO cockpit. The CEO (Ananya Rao) said: "When I open it, it should just tell me what to worry about. Top three."
+export const PROPOSE_PROMPT = `You are the analyst behind Veloxa Digital HQ. The CEO (Ananya Rao) said: "When I open it, it should just tell me what to worry about. Top three."
 From ONLY the evidence provided, propose 5 to 7 distinct candidate concerns the CEO should worry about now. Do not use outside knowledge.
 
 Score each factor 1-3 with a short evidence-based reason:

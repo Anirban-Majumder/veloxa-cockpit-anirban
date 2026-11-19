@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useId, useState } from 'react'
 import { fileName } from '../../lib/api'
-import { SourceQuote } from '../Evidence'
+import { EvidenceList } from '../Evidence'
 import { splitCitations, splitConfidence, type Confidence } from './parse-answer'
 import type { Source } from './sources'
 
@@ -16,10 +16,15 @@ export function Answer({ text, sources, searched, streaming }: {
   searched: boolean
   streaming: boolean
 }) {
+  const evidenceListId = useId()
   const [openId, setOpenId] = useState<string | null>(null)
   const { body, confidence } = splitConfidence(text)
   const pieces = splitCitations(body)
   const cited = pieces.flatMap((p) => (p.kind === 'cite' ? p.ids : [])).filter((id) => sources.has(id))
+  const evidence = [...new Set(cited)].flatMap((id) => {
+    const source = sources.get(id)
+    return source?.kind === 'evidence' ? [source.evidence] : []
+  })
   const open = openId ? sources.get(openId) : undefined
 
   return (
@@ -38,6 +43,7 @@ export function Answer({ text, sources, searched, streaming }: {
                   type="button"
                   className={`cite-chip ${openId === id ? 'is-open' : ''}`}
                   aria-expanded={openId === id}
+                  aria-controls={open?.kind === 'evidence' && source.kind === 'evidence' ? evidenceListId : undefined}
                   title={source.kind === 'table' ? `Summary of ${fileName(source.table)}` : fileName(source.evidence.path)}
                   onClick={() => setOpenId((current) => (current === id ? null : id))}
                 >
@@ -50,7 +56,7 @@ export function Answer({ text, sources, searched, streaming }: {
         {streaming && <span className="stream-caret" aria-hidden />}
       </p>
 
-      {open?.kind === 'evidence' && <SourceQuote e={open.evidence} />}
+      {open?.kind === 'evidence' && <EvidenceList id={evidenceListId} evidence={evidence} activeId={open.evidence.id} />}
       {open?.kind === 'table' && (
         <pre className="rise my-2 max-h-64 overflow-auto rounded-lg border-l-4 border-route bg-route-soft/60 px-3 py-2 text-xs whitespace-pre-wrap">
           {`Summary of ${fileName(open.table)}\n${open.summary}`}

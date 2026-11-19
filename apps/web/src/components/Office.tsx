@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { Agent } from '../lib/api'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { RelationshipLabels, RelationshipLines, SignalButtons, SignalDetails, type Point, type Signal } from './OfficeSignals'
+import type { Agent, OfficeData } from '../lib/api'
 
 /**
  * The pixel office. Coordinates are in the art's native pixels (16 px tiles) on an 640 × 416 floor
@@ -83,8 +84,8 @@ function Sheet({ id, x, y, z, col, row, flip, className }: { id: string; x: numb
 
 const sprite = (a: Agent) => (/^VX0(0[2-9]|1[0-8])$/.test(a.employee_id) ? a.employee_id : 'default')
 
-function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
-  desk: Desk; agent?: Agent; tick: number; active: boolean; onOpen: (a: Agent) => void; onHover: (id: string | null) => void
+function Workstation({ desk, agent, tick, active, onOpen, onHover, onFocus }: {
+  desk: Desk; agent?: Agent; tick: number; active: boolean; onOpen: (a: Agent) => void; onHover: (id: string | null) => void; onFocus: (id: string | null) => void
 }) {
   const { x, y } = desk
   const screen = agent ? `PC_FRONT_ON_${((tick + x + y) % 3) + 1}` : 'PC_FRONT_OFF'
@@ -105,10 +106,10 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
             className={`desk-hit at-desk ${active ? 'is-active' : ''}`}
             style={at(x - 4, y - 8, 56, 60, 900)}
             onClick={() => onOpen(agent)}
-            onMouseEnter={() => onHover(agent.employee_id)}
-            onMouseLeave={() => onHover(null)}
-            onFocus={() => onHover(agent.employee_id)}
-            onBlur={() => onHover(null)}
+            onPointerEnter={(event) => { if (event.pointerType === 'mouse') onHover(agent.employee_id) }}
+            onPointerLeave={() => onHover(null)}
+            onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) onFocus(agent.employee_id) }}
+            onBlur={() => onFocus(null)}
             aria-label={`Talk to ${agent.full_name}, ${agent.title}`}
           >
             <span className="speech">{active ? 'Hi!' : ''}</span>
@@ -120,47 +121,76 @@ function Workstation({ desk, agent, tick, active, onOpen, onHover }: {
   )
 }
 
-type Walker = { el: HTMLDivElement | null; door: HTMLDivElement | null }
+type Walker = { el: HTMLButtonElement | null; sprite: HTMLSpanElement | null; door: HTMLDivElement | null }
 
-/** A courier comes in through the front door, drops something at the break room and leaves. */
-function useCourier(ref: React.RefObject<Walker>, enabled: boolean) {
+function useCourier(ref: React.RefObject<Walker>, enabled: boolean, dismissLabel: () => void) {
   useEffect(() => {
-    if (!enabled) return
-    const path: [number, number, number][] = [ // x, y (feet), pause ms on arrival
-      [376, 450, 2500], [376, 400, 0], [376, 242, 0], [476, 242, 0], [476, 312, 0], [572, 312, 2600],
-      [476, 312, 0], [476, 242, 0], [376, 242, 0], [376, 400, 0], [376, 450, 7000],
+    const { el, sprite, door } = ref.current
+    if (!enabled || !el || !sprite) return
+    const entranceX = ENTRANCE.x + ENTRANCE.w / 2
+    const path: [number, number][] = [
+      [entranceX, H + 32], [entranceX, LOBBY.y + 86], [entranceX + 9, LOBBY.y + 86],
+      [entranceX, LOBBY.y + 86], [entranceX, H + 32],
     ]
-    let i = 0, x = path[0]![0], y = path[0]![1], wait = 1500, last = performance.now(), step = 0, raf = 0
-    const speed = 0.035 // px per ms
-    const loop = (now: number) => {
-      const dt = Math.min(50, now - last); last = now
-      const w = ref.current
-      if (w.el) {
-        let moving = false, dir = 0, flip = false
-        if (wait > 0) wait -= dt
-        else {
-          const [tx, ty, pause] = path[(i + 1) % path.length]!
-          const dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy)
-          if (d < 1) { i = (i + 1) % path.length; x = tx; y = ty; wait = pause; if (i === path.length - 1) { i = 0; x = path[0]![0]; y = path[0]![1] } }
-          else {
-            const m = Math.min(d, speed * dt)
-            x += (dx / d) * m; y += (dy / d) * m; moving = true
-            dir = Math.abs(dx) > Math.abs(dy) ? 2 : dy > 0 ? 0 : 1
-            flip = dir === 2 && dx < 0
-          }
-        }
-        step += moving ? dt : 0
-        const col = moving ? [0, 1, 2, 1][Math.floor(step / 140) % 4]! : 1
-        Object.assign(w.el.style, at(x - 8, y - 30, 16, 32, Math.round(y)), frame(col, moving ? dir : 0))
-        w.el.style.transform = flip ? 'scaleX(-1)' : ''
-        w.el.style.visibility = y > H + 4 ? 'hidden' : 'visible'
-        w.door?.classList.toggle('open', y > 370 && y < 446 && Math.abs(x - 376) < 20)
-      }
-      raf = requestAnimationFrame(loop)
+    let x = entranceX, y = H + 32, stop = 1, last = 0, step = 0, raf = 0
+    let timer: ReturnType<typeof setTimeout>
+    const randomDelay = (min: number, max: number) => min + Math.random() * (max - min)
+
+    const draw = (dir: number, moving: boolean, flip = false) => {
+      const col = moving ? [0, 1, 2, 1][Math.floor(step / 140) % 4]! : 1
+      Object.assign(el.style, at(x - 12, y - 30, 24, 32, Math.round(y)))
+      Object.assign(sprite.style, frame(col, dir), { transform: flip ? 'scaleX(-1)' : '' })
+      el.style.visibility = y > H + 4 ? 'hidden' : 'visible'
+      door?.classList.toggle('open', y >= H - 17 && y <= H + 24)
     }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [ref, enabled])
+
+    function walk() {
+      last = performance.now()
+      raf = requestAnimationFrame(move)
+    }
+
+    const move = (now: number) => {
+      const dt = Math.min(50, now - last)
+      last = now
+      const [tx, ty] = path[stop]!
+      const dx = tx - x, dy = ty - y
+      const distance = Math.hypot(dx, dy)
+      const advance = 0.048 * dt
+      if (distance > advance) {
+        x += dx / distance * advance
+        y += dy / distance * advance
+        step += dt
+        const dir = dx ? 2 : dy > 0 ? 0 : 1
+        draw(dir, true, dx < 0)
+        raf = requestAnimationFrame(move)
+        return
+      }
+      x = tx
+      y = ty
+      stop++
+      if (stop === path.length) {
+        draw(0, false)
+        el.blur()
+        dismissLabel()
+        stop = 1
+        timer = setTimeout(walk, randomDelay(20_000, 90_000))
+      } else if (stop === 3) {
+        draw(0, false)
+        timer = setTimeout(walk, randomDelay(3_000, 9_000))
+      } else {
+        raf = requestAnimationFrame(move)
+      }
+    }
+
+    timer = setTimeout(walk, 1500)
+    return () => {
+      clearTimeout(timer)
+      cancelAnimationFrame(raf)
+      door?.classList.remove('open')
+      el.style.visibility = 'hidden'
+      dismissLabel()
+    }
+  }, [ref, enabled, dismissLabel])
 }
 
 /** The office cat wanders the break room and naps. */
@@ -172,17 +202,20 @@ function useCat(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
       const dt = Math.min(50, now - last); last = now
       const el = ref.current
       if (el) {
-        let moving = false, flip = false
+        let moving = false, sideways = false, upward = false, flip = false
         if (wait > 0) wait -= dt
         else {
           const dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy)
           if (d < 1) { wait = 2500 + Math.random() * 5000; tx = 470 + Math.random() * 160; ty = 318 + Math.random() * 88 }
-          else { const m = Math.min(d, 0.024 * dt); x += (dx / d) * m; y += (dy / d) * m; moving = true; flip = dx < 0 }
+          else { const m = Math.min(d, 0.024 * dt); x += (dx / d) * m; y += (dy / d) * m; moving = true; sideways = Math.abs(dx) > Math.abs(dy); upward = dy < 0; flip = sideways && dx < 0 }
         }
         step += moving ? dt : 0
-        const col = moving ? Math.floor(step / 160) % 3 : Math.floor(now / 900) % 3
-        Object.assign(el.style, at(x - 8, y - 14, 16, 16, Math.round(y)))
-        el.style.backgroundPosition = `${(col / 2) * 100}% ${moving ? 100 : 0}%`
+        // Side views occupy two columns of the front and rear sprite grid.
+        const width = sideways ? 16 : 8
+        const col = moving ? Math.floor(step / 160) % 3 : 3 + Math.floor(now / 900) % 3
+        Object.assign(el.style, at(x - width / 2, y - 14, width, 16, Math.round(y)))
+        el.style.backgroundSize = sideways ? '300% 300%' : '600% 300%'
+        el.style.backgroundPosition = `${col * (sideways ? 50 : 20)}% ${sideways ? 100 : upward ? 50 : 0}%`
         el.style.transform = flip ? 'scaleX(-1)' : ''
       }
       raf = requestAnimationFrame(loop)
@@ -192,15 +225,39 @@ function useCat(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
   }, [ref, enabled])
 }
 
-export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
-  agents: Agent[]; selected?: string; alerts?: number; onOpen: (a: Agent) => void; onWhiteboard: () => void
+export function Office({ data, selected, alerts = 0, onOpen, onWhiteboard }: {
+  data?: OfficeData; selected?: string; alerts?: number; onOpen: (a: Agent) => void; onWhiteboard: () => void
 }) {
   const [tick, setTick] = useState(0)
-  const [hover, setHover] = useState<string | null>(null)
-  const [motion] = useState(() => typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const courier = useRef<Walker>({ el: null, door: null })
+  const [hover, setHoverPerson] = useState<string | null>(null)
+  const [focus, setFocusPerson] = useState<string | null>(null)
+  const [signalHover, setSignalHover] = useState<Signal | null>(null)
+  const [signalFocus, setSignalFocus] = useState<Signal | null>(null)
+  const [pinned, setPinned] = useState<Signal | null>(null)
+  const signal = signalFocus ?? signalHover ?? pinned
+  const indicator = signal && data?.indicators[signal.id]
+  const activeSignal = signal && indicator && (signal.kind === 'status' ? indicator.status : indicator.requests.length) ? signal : null
+  // Moving to a person shows their lines and labels instead of a pinned detail card.
+  const setHover = (id: string | null) => { setHoverPerson(id); if (id) setPinned(null) }
+  const setFocus = (id: string | null) => { setFocusPerson(id); if (id) setPinned(null) }
+  const dismissSignal = () => {
+    setPinned(null)
+    setSignalHover(null)
+    setSignalFocus(null)
+  }
+  const agents = data?.agents ?? []
+  const [motion, setMotion] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setMotion(!preference.matches)
+    preference.addEventListener('change', update)
+    return () => preference.removeEventListener('change', update)
+  }, [])
+  const [courierLabel, setCourierLabel] = useState(false)
+  const dismissCourierLabel = useCallback(() => setCourierLabel(false), [])
+  const courier = useRef<Walker>({ el: null, sprite: null, door: null })
   const cat = useRef<HTMLDivElement>(null)
-  useCourier(courier, motion)
+  useCourier(courier, motion, dismissCourierLabel)
   useCat(cat, motion)
   useEffect(() => {
     if (!motion) return
@@ -218,7 +275,20 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
     if (list && free >= 0) list[free] = a
     else standing.push(a)
   }
-  const isActive = (a?: Agent) => !!a && (a.employee_id === selected || a.employee_id === hover)
+  const person = hover ?? focus
+  const activePerson = agents.find((agent) => agent.employee_id === person)
+  const isActive = (a?: Agent) => !!a && (a.employee_id === selected || a.employee_id === person)
+  const points = new Map<string, Point>()
+  for (const [room, occupants] of seats) occupants.forEach((agent, i) => {
+    if (agent) points.set(agent.employee_id, { x: room.desks[i]!.x + 24, y: room.desks[i]!.y + 18 })
+  })
+  standing.slice(0, STANDING.length).forEach((agent, i) => {
+    points.set(agent.employee_id, { x: STANDING[i]!.x, y: STANDING[i]!.y - 20 })
+  })
+  const edges = person && data ? [
+    ...data.reporting,
+    ...data.openItems.map((item) => ({ from: item.from, to: item.to, item })),
+  ].filter(({ from, to }) => person === from || person === to) : []
 
   return (
     <div className="office-scroll">
@@ -254,11 +324,11 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
 
           {/* Room signs */}
           {ROOMS.map((r) => (
-            <span key={r.dept} className="room-sign" style={{ ...at(r.x + r.w / 2 - 40, r.y + 22, 80, 12, 5), ['--dept' as string]: r.color }}>
+            <span key={r.dept} className="room-sign" style={{ ...at(r.x + r.w / 2 - 40, r.y + (r.y === 0 ? 22 : r.h - 20), 80, 12, 5), ['--dept' as string]: r.color }}>
               {r.label}
             </span>
           ))}
-          <span className="room-sign" style={{ ...at(LOBBY.x + 8, LOBBY.y + 22, 72, 12, 5), ['--dept' as string]: '#c9a227' }}>Reception</span>
+          <span className="room-sign" style={{ ...at(LOBBY.x + (LOBBY.w - 72) / 2, LOBBY.y + 14, 72, 12, 5), ['--dept' as string]: '#c9a227' }}>Reception</span>
           <span className="room-sign" style={{ ...at(BREAK.x + 56, BREAK.y + 22, 80, 12, 5), ['--dept' as string]: '#8fa3b3' }}>Break room</span>
 
           {/* Engineering */}
@@ -289,15 +359,15 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
           {/* Corridor */}
           <div className="runner" style={at(16, CORRIDOR.y + 16, W - 32, 16, 1)} />
           {[64, 224, 416, 576].map((x) => <div key={x} className="ceiling-light" style={at(x - 30, CORRIDOR.y - 6, 60, 60, 2)} />)}
+          <button type="button" className="board-hit" style={at(354, CORRIDOR.y - 12, 36, 36, 302)} onClick={onWhiteboard} aria-label="Read the whiteboard: today’s top worries">
+            <img className="px" src={`${ART}WHITEBOARD.png`} alt="" />
+            <span className="board-tag">NOTICE</span>
+            {alerts > 0 && <span className="board-alert" aria-hidden>!</span>}
+          </button>
           {/* Lobby */}
           <Img file="DESK_FRONT" x={LOBBY.x + 88} y={LOBBY.y + 64} w={48} h={32} />
           <Img file="PC_FRONT_OFF" x={LOBBY.x + 104} y={LOBBY.y + 65} w={16} h={32} z={LOBBY.y + 103} />
-          <span className="welcome" style={at(LOBBY.x + 84, LOBBY.y + 106, 56, 10, 200)}>Welcome</span>
-          <button type="button" className="board-hit" style={at(LOBBY.x + 98, LOBBY.y + 2, 36, 36, 6)} onClick={onWhiteboard} aria-label="Read the whiteboard: today’s top worries">
-            <img className="px" src={`${ART}WHITEBOARD.png`} alt="" />
-            <span className="board-tag">Worries</span>
-            {alerts > 0 && <span className="board-alert" aria-hidden>!</span>}
-          </button>
+          <span className="welcome" style={at(LOBBY.x + (LOBBY.w - 56) / 2, LOBBY.y + 106, 56, 10, 200)}>Welcome</span>
           <Img file="LARGE_PLANT" x={LOBBY.x + 4} y={LOBBY.y + 104} w={32} h={48} />
           <Img file="LARGE_PLANT" x={LOBBY.x + 108} y={LOBBY.y + 104} w={32} h={48} />
           <Img file="CUSHIONED_BENCH" x={LOBBY.x + 10} y={LOBBY.y + 60} w={16} h={16} />
@@ -317,7 +387,7 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
           {/* People at their desks */}
           {ROOMS.flatMap((r) => r.desks.map((d, i) => {
             const a = seats.get(r)![i]
-            return <Workstation key={`${r.dept}-${i}`} desk={d} agent={a} tick={tick} active={isActive(a)} onOpen={onOpen} onHover={setHover} />
+            return <Workstation key={`${r.dept}-${i}`} desk={d} agent={a} tick={tick} active={isActive(a)} onOpen={onOpen} onHover={setHover} onFocus={setFocus} />
           }))}
           {standing.slice(0, STANDING.length).map((a, i) => {
             const s = STANDING[i]!
@@ -326,8 +396,9 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
               <div key={a.employee_id}>
                 <Sheet id={sprite(a)} x={s.x - 8} y={s.y - 30} z={s.y} col={active ? 7 : (tick + i) % 8 < 6 ? 1 : 7} row={0} />
                 <button type="button" className={`desk-hit ${active ? 'is-active' : ''}`} style={at(s.x - 18, s.y - 36, 36, 44, 900)}
-                  onClick={() => onOpen(a)} onMouseEnter={() => setHover(a.employee_id)} onMouseLeave={() => setHover(null)}
-                  onFocus={() => setHover(a.employee_id)} onBlur={() => setHover(null)} aria-label={`Talk to ${a.full_name}, ${a.title}`}>
+                  onClick={() => onOpen(a)} onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHover(a.employee_id) }}
+                  onPointerLeave={() => setHover(null)}
+                  onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) setFocus(a.employee_id) }} onBlur={() => setFocus(null)} aria-label={`Talk to ${a.full_name}, ${a.title}`}>
                   <span className="speech">{active ? 'Hi!' : ''}</span>
                   <span className="nameplate">{a.full_name.split(' ')[0]}</span>
                 </button>
@@ -335,10 +406,33 @@ export function Office({ agents, selected, alerts = 0, onOpen, onWhiteboard }: {
             )
           })}
 
+          {edges.length > 0 && <RelationshipLines edges={edges} points={points} width={W} height={H} />}
+          {data && agents.map((agent) => {
+            const point = points.get(agent.employee_id)
+            if (!point) return null
+            return <SignalButtons key={agent.employee_id} id={agent.employee_id} name={agent.full_name}
+              indicator={data.indicators[agent.employee_id]} active={activeSignal}
+              style={{ left: `${100 * (point.x + (point.x > 560 ? -54 : 18)) / W}%`, top: `${100 * (point.y - 24) / H}%` }}
+              onHover={setSignalHover} onFocus={setSignalFocus} onDismiss={dismissSignal}
+              onToggle={(signal) => {
+                setSignalFocus(null)
+                setPinned((current) => current?.id === signal.id && current.kind === signal.kind ? null : signal)
+              }} />
+          })}
           {/* Ambient life */}
-          <div ref={(el) => { courier.current.el = el }} className="px sheet" style={{ backgroundImage: `url(${ART}people/courier.png)`, visibility: 'hidden' }} aria-hidden />
-          <div ref={cat} className="px cat" style={{ ...at(472, 382, 16, 16, 396), backgroundImage: `url(${ART}cat.png)` }} aria-hidden />
+          <button type="button" ref={(el) => { courier.current.el = el }} className="courier-hit" aria-label="Zomato guy"
+            aria-pressed={courierLabel} onClick={() => setCourierLabel((open) => !open)} onBlur={dismissCourierLabel}
+            onKeyDown={(event) => { if (event.key === 'Escape') event.currentTarget.blur() }}>
+            <span ref={(el) => { courier.current.sprite = el }} className="px sheet courier-sprite"
+              style={{ backgroundImage: `url(${ART}people/courier.png)` }} aria-hidden />
+            <span className="nameplate" aria-hidden>Zomato guy</span>
+          </button>
+          <div ref={cat} className="px cat" style={{ ...at(476, 382, 8, 16, 396), backgroundImage: `url(${ART}cat.png)`, backgroundPosition: '60% 0%' }} aria-hidden />
         </div>
+        {data && activeSignal
+          ? <SignalDetails signal={activeSignal} data={data} />
+          : data && activePerson && <RelationshipLabels person={activePerson} edges={edges} names={data.names}
+            status={data.indicators[activePerson.employee_id]?.status} />}
     </div>
   )
 }

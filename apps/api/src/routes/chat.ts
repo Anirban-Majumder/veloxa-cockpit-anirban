@@ -2,9 +2,11 @@ import { createAgentUIStreamResponse, createIdGenerator } from "ai";
 import { Hono } from "hono";
 import { z } from "zod";
 import { findAgent } from "../../../../src/agents/store";
-import { createChatAgent, searchedSuccessfully, type ChatMessage } from "../../../../src/chat/agent";
+import { prepareChat, searchedSuccessfully, type ChatMessage } from "../../../../src/chat/agent";
 import { HISTORY_LIMIT, isSmallTalk } from "../../../../src/chat/config";
-import { conversationBelongsTo, currentConversation, latestConversation, loadMessages, savedQuestion, saveExchange, startConversation } from "../../../../src/chat/history";
+import { conversationBelongsTo, currentConversation, latestConversation, loadMessages, questionRowId, savedQuestion, saveExchange, startConversation } from "../../../../src/chat/history";
+import { pointInTime } from "../../../../src/chat/point-in-time";
+import { noRecordResponse } from "../../../../src/chat/unavailable";
 import { openDb } from "../../../../src/db/client";
 import { resolveCutoff } from "../cutoff";
 import { HttpError, readBody } from "../http";
@@ -23,7 +25,7 @@ const ChatRequest = z.object({
 });
 
 /**
- * `agent=VX003` talks to a person; no agent means the cockpit analyst.
+ * `agent=VX003` talks to a person; no agent means the Veloxa Digital HQ analyst.
  * `conversation` pins a page visit to its own conversation; without it the latest one is used.
  */
 export const chat = new Hono()
@@ -45,32 +47,41 @@ export const chat = new Hono()
   .post("/", async (c) => {
     const body = await readBody(c, ChatRequest);
     const db = await openDb();
-    const cutoff = await resolveCutoff(body.cutoff);
-    const agent = await resolveAgent(body.agent, cutoff);
-    const agentId = agent?.employee_id ?? null;
+    const selected = await resolveCutoff(body.cutoff);
+    const text = body.message.parts[0].text;
+    const { cutoff, asOf, historyThrough } = pointInTime(text, selected);
+    const dashboardAgent = await resolveAgent(body.agent, selected);
+    const agent = dashboardAgent && (cutoff === selected ? dashboardAgent : await findAgent(db, dashboardAgent.employee_id, cutoff));
+    const agentId = dashboardAgent?.employee_id ?? null;
     const conversationId = body.conversation
       ? await resolveConversation(agentId, body.conversation)
       : await currentConversation(db, agentId);
 
-    const text = body.message.parts[0].text;
     const question: ChatMessage = { id: body.message.id, role: "user", parts: [{ type: "text", text }] };
     const mustSearch = !isSmallTalk(text);
     await assertRetryable(conversationId, question.id, cutoff);
 
-    const history = await loadMessages(db, conversationId, cutoff);
+    if (dashboardAgent && !agent) return noRecordResponse(db, conversationId, cutoff, question, newMessageId(), asOf);
+
+    const history = agent ? [] : await loadMessages(db, conversationId, cutoff, undefined, historyThrough);
     const retried = history.findIndex((m) => m.id === question.id);
     const earlier = (retried >= 0 ? history.slice(0, retried) : history).slice(-HISTORY_LIMIT);
     const messages = [...earlier, question];
+    const { chatAgent, sources } = await prepareChat(db, cutoff, agent, {
+      mustSearch, historyThrough,
+      beforeMessage: agent ? await questionRowId(db, conversationId, question.id) : undefined,
+    });
 
     return createAgentUIStreamResponse({
-      agent: await createChatAgent(db, cutoff, agent, { mustSearch }),
+      agent: chatAgent,
+      messageMetadata: ({ part }) => part.type === "start" ? { asOf, scoped: !!agent, briefSources: sources } : undefined,
       uiMessages: messages,
       originalMessages: messages,
       generateMessageId: newMessageId,
       abortSignal: c.req.raw.signal,
       onEnd: ({ responseMessage, outcome }) => {
         const answered = responseMessage.parts.some((part) => part.type === "text" && part.text.trim());
-        const grounded = !mustSearch || searchedSuccessfully(responseMessage);
+        const grounded = !mustSearch || sources.length > 0 || searchedSuccessfully(responseMessage);
         if (outcome.status === "completed" && answered && grounded) return saveExchange(db, conversationId, cutoff, question, responseMessage);
       },
       onError: (error) => (error instanceof Error ? error.message : "The model could not answer."),

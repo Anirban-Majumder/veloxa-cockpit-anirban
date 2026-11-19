@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { EvidenceRef } from '../../lib/api'
-import { Citation } from '../Evidence'
+import { EvidenceList } from '../Evidence'
 
 type Props =
   | { state: 'input-streaming' | 'input-available'; query?: string }
@@ -32,11 +32,7 @@ export function SearchStep(props: Props) {
         Searched {query} · {count === 0 ? 'nothing found' : `${count} record${count === 1 ? '' : 's'}`}
         {count > 0 && <span className="search-caret" aria-hidden>{open ? '▴' : '▾'}</span>}
       </button>
-      {open && (
-        <div className="mt-2 flex flex-wrap">
-          {props.results.map((result) => <Citation key={result.id} e={result} />)}
-        </div>
-      )}
+      {open && count > 0 && <EvidenceList evidence={props.results} />}
     </div>
   )
 }

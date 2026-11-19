@@ -1,5 +1,5 @@
 import type { Concern } from '../lib/api'
-import { SourceQuote } from './Evidence'
+import { EvidenceList } from './Evidence'
 
 const SCALE = {
   impact: ['Limited', 'One team', 'Whole company'],
@@ -36,7 +36,7 @@ export function ConcernDetail({ c }: { c: Concern }) {
       )}
       <div>
         <p className="font-display font-bold">Sources</p>
-        {c.evidence.map((e) => <SourceQuote key={e.id} e={e} />)}
+        <EvidenceList evidence={c.evidence} />
       </div>
       <p className="text-xs text-ink-soft">
         Priority {c.score} of 12, scored as twice the impact plus urgency plus evidence strength. Suggested by {c.model}; the order is computed, not chosen by the model.
