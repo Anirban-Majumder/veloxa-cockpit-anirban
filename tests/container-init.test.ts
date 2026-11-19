@@ -9,6 +9,8 @@ test("startup trusts one evidence row, preserves concerns, and ignores future pa
   await execute(db, `INSERT INTO sources VALUES (1, 'existing', 'hash', 'txt', 'data_room', 1, ?, 'now')`, release.releasedAt);
   expect(await hasDayEvidence(db, 1)).toBe(false);
   await execute(db, `INSERT INTO evidence (source_id, locator_json, text) VALUES (1, '{}', 'existing evidence')`);
+  await execute(db, "INSERT INTO evidence (source_id, locator_json, text, data_json) VALUES (1, '{}', 'employee', ?)",
+    JSON.stringify({ "Emp ID": "VX007", "Full Name": "Priya Nair" }));
   expect(await hasDayEvidence(db, 1)).toBe(true);
   expect(await hasDayEvidence(db, 2)).toBe(false);
   await execute(db, `INSERT INTO concerns (knowledge_cutoff, title, description, impact, urgency, evidence_strength,
@@ -18,6 +20,9 @@ test("startup trusts one evidence row, preserves concerns, and ignores future pa
     { day: 2, folder: "future", releasedAt: "2999-11-17T10:00:00+05:30" }]);
   expect(logs).toEqual(["Day 1: evidence exists; skipping import."]);
   expect(await selectOne(db, "SELECT title FROM concerns")).toEqual({ title: "keep me" });
+  expect(await selectOne(db, "SELECT soul FROM agents WHERE employee_id = 'VX007'")).toEqual({
+    soul: expect.stringContaining("overloaded"),
+  });
 });
 
 test("startup fails clearly when no packs have been released", async () => {

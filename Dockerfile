@@ -18,6 +18,7 @@ COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY package.json ./
 COPY apps/api ./apps/api
 COPY src ./src
+COPY data/souls.json ./data/souls.json
 COPY scripts/container-init.ts scripts/container-entrypoint.sh scripts/ingest.ts ./scripts/
 EXPOSE 8787
 ENTRYPOINT ["sh", "scripts/container-entrypoint.sh"]
