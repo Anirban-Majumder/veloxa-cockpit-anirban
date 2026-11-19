@@ -1,97 +1,84 @@
-# Veloxa CXO Cockpit
+# Veloxa Digital HQ
 
-A hackathon prototype for answering company questions from structured records and source evidence. The planned cockpit provides short cited answers, confidence and uncertainty, interviews with 14 grounded people, and an evidence-backed list of concerns.
+A CXO cockpit for Veloxa, the fictional company in the Hiyaku Systems hackathon. The CEO opens a pixel-art office with 14 people as AI agents, sees the top three worries on the whiteboard, and asks the analyst or any person a question. Answers are short, cite the records behind them, state a confidence level, say "I don't know" or "the sources disagree" when that is the honest answer, and only use what was released by the selected date.
 
-## Status — 16 November 2026
+How it works: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-Ingestion, the database, the API, the Day 2 top-three concerns, the pixel-office UI and streaming analyst/person chat are implemented. The 25-question answer suite is not yet implemented. The agreed stack is React/Vite, Hono on Bun, local Turso and AI SDK streaming with a configurable hosted model. The 14-person roster, seven-table model and persistent per-agent memory are documented in `ARCHITECTURE.md`.
+## One-command setup (Docker)
 
-## Run and test
+Needs Docker with Compose (or Podman with `podman compose`) and a Google AI Studio key ([get one](https://aistudio.google.com/apikey)). From a fresh clone:
 
-Needs Bun 1.4.4 ([install](https://bun.sh/docs/installation)) and the release pack at `Veloxa_Hackathon_Release_Packs/` (or set `VELOXA_RELEASE_DIR`).
+```sh
+GOOGLE_GENERATIVE_AI_API_KEY=<your-key> docker compose up --build
+```
+
+Open http://localhost:8787. The first start ingests every released day from `data/Release_Packs` (committed) and generates the worry list for each day, which takes a few minutes and makes model calls. Later starts reuse the database in `./data`.
+
+To keep settings in a file instead, run `cp .env.example .env`, set the key there, and run `docker compose up --build`. Compose reads `.env` on its own.
+
+- `./data` is mounted at `/app/data`, so the database and chat history survive restarts and rebuilds. Stop with `docker compose down`.
+- A day's pack counts only from 10:00 IST on its release date. Restart after a release to load it.
+- If generating worries fails (bad key, no model access), startup stops. Fix the key and run the command again; evidence already imported is not reimported.
+- To reimport a day while the container runs: `docker compose exec cockpit bun scripts/ingest.ts`.
+
+## Run without Docker
+
+Needs Bun 1.4.4 ([install](https://bun.sh/docs/installation)).
 
 ```sh
 bun install --frozen-lockfile
-cp .env.example .env    # set LLM_BASE_URL and LLM_MODEL (LLM_API_KEY is optional)
-bun run dev             # API on :8787 + UI on http://localhost:5173
-bun run ingest          # works with or without the dev server running
+cp .env.example .env    # set GOOGLE_GENERATIVE_AI_API_KEY
+bun run ingest          # load every released day and generate worries
+bun run dev             # API on :8787, UI on http://localhost:5173
 ```
 
+`bun run start` builds the UI and serves it from the API on :8787. Only one process can open the database: while the API runs, `bun run ingest` asks the API to do the work.
+
 ```sh
-bun run start           # production: builds the UI and serves it from the API on :8787
+bun run ingest 2                    # Days 1–2 only; worries as of Day 2
+bun run ingest 2 --no-concerns      # evidence only
+bun run ingest 2 --regen-concerns   # regenerate worries
+```
+
+Don't run the host API and the container on the same `./data` at the same time.
+
+## Tests
+
+```sh
+bun test tests          # deterministic tests, no model calls
+bun run eval            # 26 live questions through the real agent and model
 bun run typecheck
 bun run lint
-bun test tests
 ```
 
-The embedded database allows one process at a time. When the API is running, `bun run ingest` asks it to do the work; otherwise the script ingests directly. Days count only from 10:00 IST on their release date.
+`bun run eval` needs the API key and an ingested database. Each answer is checked by fixed rules (required facts and citations, forbidden later-date facts, correct refusals), with no LLM judge. The questions are in `tests/fixtures/eval-questions.ts`; 10 of them test refusing or admitting uncertainty, including date-leak pairs before and after a release, salary requests, missing data and other people's email. `EVAL_TIMEOUT_MS` (default 120000) and `EVAL_DELAY_MS` (default 5000) set the pacing.
 
-## Docker
+## Configuration
 
-Requires Docker with Compose. Copy `.env.example` to `.env` and set `GOOGLE_GENERATIVE_AI_API_KEY`, then run:
+All settings are in `.env.example`.
 
-```sh
-docker compose up --build
-```
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Required. Gemini key. |
+| `GEMINI_MODEL` | Default `gemini-3.5-flash-lite`. |
+| `GEMINI_BASE_URL` | Optional proxy; empty for Google's endpoint. |
+| `APP_ENV` | `dev` (default): no sign-in, for localhost. `prod`: needs `VELOXA_PASSPHRASE`, Secure cookies. |
+| `VELOXA_PASSPHRASE` | Sign-in passphrase when `APP_ENV=prod`. Sessions last seven days; changing it and restarting signs everyone out. |
+| `PUBLIC_BASE_PATH` | Prod only: prefix a reverse proxy strips, e.g. `/VeloxaDigitalHQ`. |
+| `PUBLIC_ORIGINS` | Prod only: comma-separated browser origins allowed to call the API. |
+| `VELOXA_RELEASE_DIR`, `VELOXA_DB` | Without Docker: release pack and database paths (default `data/Release_Packs`, `data/veloxa.db`). |
 
-Open http://localhost:8787. Compose mounts the repository's `./data` at `/app/data`, so the release packs, database and chat history stay on the host through container stops, removal and rebuilds. The image contains neither the database nor API keys. Only production dependencies and the built frontend are included in the runtime image.
+Use HTTPS for remote access in prod. Behind a proxy on the same host, the sign-in rate limit uses `X-Real-IP`, only for loopback connections.
 
-Startup checks each released day: any evidence row for that day means its entire import is treated as complete, even if files were added or a previous import was interrupted. Days without evidence are ingested. Missing concerns are generated separately; existing concerns are preserved. A generation failure stops startup; rerun the command after fixing the key or model access to retry missing concerns without reimporting evidence. Initialization can take time and incurs model calls on a fresh database. Unreleased packs stay excluded; restart after a new day's release to initialize it.
-
-Do not run the host API against the same database while the container is running. For a deliberate file-by-file refresh, use `docker compose exec cockpit bun scripts/ingest.ts` (the running API owns the database). Stop with `docker compose down`; this leaves `./data` intact.
-
-## Code layout
-
-```
-apps/api/src/index.ts       Hono app: routes, error handler, static UI in production
-apps/api/src/routes/        one file per resource: chat, concerns, agents, ingest, status
-apps/web/src/components/chat/  streaming chat UI (search steps, citations, confidence)
-src/ai/                     model setup and generateStructured (AI SDK Output.object)
-src/chat/                   chat agent: prompt (config.ts), search tool, history
-src/concerns/               top-concern prompt + schema (config.ts), scoring, generation, storage
-src/ingestion/              release discovery, parsers, ingest job
-src/retrieval/              cutoff-filtered evidence and keyword search
-src/db/                     schema, connection and query helpers
-```
-
-## Materials and schedule
-
-Source materials are under `Veloxa_Hackathon_Release_Packs/`. Veloxa and its records are fictional. The hackathon email overrides the older candidate brief on schedule and mandatory scope.
-
-- 16 November, 11:59 PM IST: share the public repository link and commit `ARCHITECTURE.md`.
-- Commit at least twice daily.
-- 17 November: respond to T6a; 18 November: T6b; 19 November: T6c and T6d. Each response is due by 11:59 PM IST on its release day.
-- 20 November, 6:00 PM IST: code freeze and final email submission with repository URL, frozen commit hash, and setup/run command.
-
-All packs arrived upfront. Treat each day’s sources as available from 10:00 AM IST on its release date. Friday has no new release.
+API docs are at `/openapi.json`. A read-only database browser is at `/db` when `APP_ENV=dev` or `VELOXA_DB_BROWSER=1`.
 
 ## Project records
 
-- [Architecture](ARCHITECTURE.md): proposed system and implementation boundaries.
-- [Assumptions](ASSUMPTIONS.md): explicit assumptions and revision history.
-- [Transcript notes](TRANSCRIPT_NOTES.md): discrepancies and evidence requiring review.
-- [Decisions](DECISIONS.md): choices and their rationale.
-- [AI log](AI_LOG.md): assistance used, mistakes, and corrections.
+- [ARCHITECTURE.md](ARCHITECTURE.md): the system as built.
+- [ASSUMPTIONS.md](ASSUMPTIONS.md): assumptions with source, confidence and what would change them.
+- [TRANSCRIPT_NOTES.md](TRANSCRIPT_NOTES.md): suspected mishearings and contradictions, and what I concluded.
+- [DECISIONS.md](DECISIONS.md): choices that could go either way.
+- [VOICE_NOTES.md](VOICE_NOTES.md): responses to CEO voice notes T6a–T6d.
+- [AI_LOG.md](AI_LOG.md): what AI was used for, where it was wrong, what I changed.
 
-## Ingestion and top concerns (Day 2)
-
-Copy `.env.example` to `.env` and set `LLM_BASE_URL` and `LLM_MODEL` (any OpenAI-compatible endpoint; `LLM_API_KEY` is optional and only sent when set). Put the release pack at `Veloxa_Hackathon_Release_Packs/` or set `VELOXA_RELEASE_DIR`.
-
-If the API is running on the same database and release folder, `bun run ingest` posts the job to it and prints its progress (the API's model settings apply). With a different database it ingests locally; with the same database but a different release folder it stops and says so. The same job is available as `POST /api/ingest` (body `{day?, concerns?, regen?}`) with progress at `GET /api/ingest`.
-
-```sh
-bun run ingest        # ingest every released day (from 10:00 IST on its date), then generate top concerns
-bun run ingest 2      # ingest Day 1 + Day 2 only (cumulative); concerns as of Day 2 10:00 IST
-bun run ingest 2 --no-concerns      # evidence only
-bun run ingest 2 --regen-concerns   # force concern regeneration
-```
-
-- Each `DayN_Ddd_DDMon` folder is treated as released at 10:00 IST on that date. Only `data_room/` and `transcripts/` are ingested; `data_room/templates/` and `brief/` are skipped.
-- Re-running is idempotent (`(path, sha256)` per source); a changed file becomes a new source version and the latest version at a cutoff wins.
-- Spreadsheet/CSV rows keep structured fields in `evidence.data_json`; documents are split by paragraph/page; emails are one row each.
-- Individual payroll rows are tagged `restricted: individual_salary` and never reach the CEO view or the model. In any other passage that mentions pay, amounts are masked; company-wide monthly payroll lines in the GL are kept, since A002 allows totals.
-- Concerns: the model proposes candidates with 1–3 factor scores, reasons, uncertainty and evidence IDs; the backend drops unknown citations, computes `2 × impact + urgency + evidence strength`, ranks (ties by urgency, then impact) and stores them per knowledge cutoff. The home page shows the top three with expandable evidence.
-
-## Chat
-
-Chat streams through the AI SDK (`ToolLoopAgent`, `useChat`). Tools: `search_evidence` (both the analyst and people) and, for the analyst, `summarize_table`, which returns counts and per-month trends of large tables, cited as `[T1]`. Pure small talk is answered directly; anything else must search first. The knowledge cutoff, the person's scope and the salary filter are applied inside the tool from the request, never taken from the model. Answers cite records inline as `[E12]`, end with a confidence line, and the UI shows each search step, its results and the cited passages. `GET /api/chat?agent=&cutoff=` returns history, `POST /api/chat` streams a reply, `DELETE /api/chat?agent=` starts a fresh conversation.
+Veloxa and all its records are fictional. Source materials are in `data/Release_Packs/`, one folder per day; each counts as released at 10:00 IST on its date.

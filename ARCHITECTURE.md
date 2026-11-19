@@ -2,145 +2,128 @@
 
 ```mermaid
 flowchart TD
-    Drops["Daily data_room + transcripts"] --> Ingest["Ingestion command<br/>Parse, identify sources and preserve provenance"]
-    Ingest --> DB[("Local Turso<br/>sources · evidence · agents<br/>conversations · messages<br/>concerns · concern_evidence")]
-    Ingest --> Files["Original files on disk<br/>Paths + hashes stored in Turso"]
+    Packs["data/Release_Packs/DayN_*<br/>data_room + transcripts"] --> Ingest["Ingestion<br/>bun run ingest · POST /api/ingest · container start"]
+    Souls["data/souls.json"] --> Ingest
+    Ingest --> DB[("Local Turso file<br/>sources · evidence · agents · agent_profiles<br/>conversations · messages · concerns · concern_evidence")]
+    Ingest -->|per released day| Concerns["Concern generation<br/>model proposes + verifies, backend ranks"]
+    Concerns --> DB
 
-    CEO["CEO"] --> UI["React + Vite<br/>Analyst chat · 14 person chats · Top concerns"]
-    UI --> API["Hono on Bun"]
-    API --> Context["Context assembly<br/>Agent profile + soul + persistent history"]
-    DB --> Context
-    Context --> Retrieval["Initial retrieval<br/>Knowledge-date, privacy and agent-knowledge filters"]
+    CEO["CEO"] --> UI["React + Vite<br/>pixel office · whiteboard worries · analyst chat · person chat"]
+    UI -->|HTTP| API["Hono on Bun"]
+    API --> PIT["Point-in-time parser<br/>narrows the selected cutoff"]
+    PIT --> Retrieval["src/retrieval<br/>cutoff · salary redaction · person scope"]
     DB --> Retrieval
-    Retrieval --> SDK["AI SDK<br/>Answer generation + streaming"]
-    SDK <--> Model["Configurable hosted model"]
-    SDK -->|Optional| Search["Restricted search tool"]
-    Search --> Retrieval
-    SDK -->|Persist messages| DB
-    SDK -->|Stream answer| UI
-
-    SDK -->|Proposed concerns + factor scores| Ranking["Backend scoring<br/>2 × impact + urgency + evidence strength"]
-    Ranking -->|Persist ranked concerns + evidence links| DB
-    Ranking --> UI
+    Retrieval --> Brief["Person brief + conversation memory"]
+    Brief --> Agent["ToolLoopAgent (AI SDK)<br/>search_evidence · summarize_table"]
+    Retrieval --> Agent
+    Agent <--> Model["Gemini (configurable)"]
+    Agent -->|SSE stream| UI
+    Agent -->|save exchange| DB
 ```
 
-## Goal
+## What it is
 
-Build a conversational company analyst backed by structured facts and retrievable source evidence. Support 14 interviewable people, cited answers with confidence, a ranked concern view, and point-in-time queries. Keep unsupported conclusions and invented character details distinct from recorded facts.
+A website for the CEO of Veloxa. She opens a pixel-art office with the 14 person agents at their desks, sees the top three worries on the whiteboard, and can ask either the company analyst or any one person a question. Every answer cites evidence rows, ends with a confidence line, and only uses material released by the selected knowledge cutoff.
 
-Product boundary clarified by the owner on 16 November 2026: the product is a website with 14 person agents and a CEO chat interface. Its recurring data inputs are each day's `data_room` and `transcripts` folders, including leadership calls and CEO voice-note transcripts. Repository Markdown files (`README.md`, `ARCHITECTURE.md`, `ASSUMPTIONS.md`, `TRANSCRIPT_NOTES.md`, `DECISIONS.md` and `AI_LOG.md`) are development records, not ingestion inputs. Transcripts provide attributed runtime evidence; their product requests also guide development rather than automatically modifying application behavior.
+Inputs are the daily `data_room` and `transcripts` folders. The repository's Markdown files are development records and are not ingested.
 
-The confirmed design combines a structured database for people and dated records with searchable source passages. The language model composes cited answers and performs arithmetic from retrieved evidence. Backend code enforces date and access filters. Model calculations may be less reproducible and require numerical test cases; the search implementation and model remain open decisions.
-
-The website has two chat paths: a general analyst chat retrieves company evidence directly, and selecting a person opens that agent’s profile and its separate CEO conversation history. Both use the shared AI SDK implementation. General company questions do not require the analyst to consult all 14 person agents. Analyst conversations use the same conversation/message tables with an analyst kind and no person-agent ID.
-
-For now, use the AI SDK with one configurable hosted provider and model for both cockpit and person-agent answers, as selected by the owner on 16 November 2026. Supply the API key through an environment variable. If the key is missing or the model is unavailable, show a clear error rather than fabricate an answer or silently switch models; keep non-AI evidence browsing usable where practical. The provider and model remain configurable; the evaluator supplies the API key through the documented environment variable. Model calls require network access; local database operation does not.
-
-## Application components
-
-- UI: React with Vite.
-- API: Hono running on Bun, owning database access, evidence retrieval, memory and model calls.
-- Generation: AI SDK with a configurable hosted model and streamed responses to the UI.
-- Ingestion: a separate repeatable command processing each daily release into the same local Turso database.
-
-The UI talks to the API; database files and provider credentials remain on the server side. Use a single package with one root `package.json`, not a workspace:
+## Layout
 
 ```text
-apps/web/                 React + Vite UI
-apps/api/src/             Hono API and streaming endpoints
-src/db/                   Schema, migrations and queries
-src/ingestion/            Parsing and evidence population
-src/retrieval/            Search and date/access filters
-src/agents/               Profiles, soul and conversation memory
-src/ai/                   AI SDK calls and optional search tool
-src/concerns/             Concern generation and scoring
-scripts/ingest.ts          Ingestion entry point
-scripts/start.ts           UI/API startup entry point
-tests/fixtures/            Test fixtures
-tests/questions/           Automated answer questions
-data/                     Ignored local database
+apps/web/src/          React UI (Office, Whiteboard, chat panel, evidence chips)
+apps/api/src/          Hono app; routes/ has one file per resource
+src/db/                Schema, Turso client, read-only browser
+src/ingestion/         Release discovery, parsers, ingest, souls, startup initialisation
+src/retrieval/         Cutoff filter, salary redaction, person scope, keyword search, person brief
+src/chat/              Agent, prompts, point-in-time parser, tools, conversation history
+src/concerns/          Evidence pack, generation + verification, scoring
+src/agents/            Agent store and office layout (relationships, status, requests)
+src/ai/                Model setup and generateStructured
+scripts/               dev, ingest, eval, container entrypoint
+tests/                 bun test suites; tests/fixtures/eval-questions.ts for the live eval
+data/                  Release_Packs, souls.json, veloxa.db
 ```
 
-The API and ingestion script import shared server modules directly from `src/`. The UI calls the API over HTTP and does not import server modules. Keep one root start command, an ingestion command and a test command; exact command names and fresh-clone setup remain to be implemented. Commit the Bun lockfile and an environment-variable example without credentials.
+`src/` never imports from `apps/`; the web app talks to the API only over HTTP. Only the API process opens the database file. When the API is running, `bun run ingest` asks it to do the work.
 
-## Proposed flow
+API routes: `/api/status`, `/api/agents` (people and office state at a cutoff), `/api/chat` (GET history, POST streams a reply, DELETE starts a new conversation), `/api/concerns`, `/api/ingest`, `/api/session`, `/api/login`, `/api/logout`. `/openapi.json` documents them. A read-only database browser at `/db` is enabled only with `APP_ENV=dev` or `VELOXA_DB_BROWSER`. With `APP_ENV=prod`, a passphrase (`VELOXA_PASSPHRASE`) protects the site.
 
-Ingestion is a separate, repeatable process run for each new daily release's `data_room` and `transcripts` folders; either folder may be absent. It adds or versions company records and source evidence without deleting prior releases or conversation history. Chat requests query the populated database rather than reparsing the files. The ingestion implementation and degree of automated interpretation remain open.
+## Ingestion
 
-For each source, retain the original document on disk and store its stable path and content hash in the database, along with deterministically extracted text. Preserve links between extracted passages and their precise source locations. Start with keyword and structured search; add embeddings only if retrieval tests demonstrate an improvement. Passage boundaries and the search implementation remain open. For fresh-clone setup, the evaluator supplies the original release pack at a documented local path; it remains ignored by Git.
-
-For a question, the backend first retrieves relevant evidence and supplies it to the model. The model may optionally call a restricted search tool with a natural-language query for additional matching evidence, returned with source IDs and locations. The tool does not execute arbitrary model-generated SQL. Both paths must enforce the applicable release-date, salary and person-knowledge filters before evidence reaches the model. Search tool limits and detailed enforcement remain to be designed.
-
-The first version trusts the model's citations without backend validation of citation IDs, as selected by the owner on 16 November 2026. Automated tests should still assess citation accuracy. This leaves a risk that an answer cites an unavailable or irrelevant source.
-
-1. Ingest the new daily `data_room` and `transcripts` folders, parsing spreadsheets, documents, emails and transcripts into source records with exact locators.
-2. Resolve people and project identifiers without discarding original spellings.
-3. Store attributed claims, structured records, assumptions, and conflicts.
-4. For a CEO question, load the selected agent's persistent conversation history and retrieve company evidence, applying knowledge-date, privacy and person-knowledge filters before model context construction.
-5. Supply relevant structured records and text to the model, which performs arithmetic for numerical answers while acknowledging incomplete or conflicting inputs.
-6. Generate a short answer containing citations, confidence, and any unresolved disagreement or missing evidence; persist the CEO message and agent response for future conversations.
-
-Answers use high, medium or low confidence with a short reason considering source quality, agreement and coverage. These labels are not calibrated probabilities.
+- Releases are discovered as `DayN_*` folders under `data/Release_Packs` (or `VELOXA_RELEASE_DIR`). A day counts only from 10:00 IST on its release date; packs not yet released are skipped.
+- Only `data_room/` and `transcripts/` are read; `brief/` and `data_room/templates/` are not company evidence.
+- Each file becomes one `sources` row (path, sha256, type, kind, release day, `released_at`). Parsers (xlsx, csv, docx, pdf, eml, txt) turn it into `evidence` rows with an exact locator (sheet/row, page, paragraph). Structured fields go in `data_json`; restrictions and other interpretations go in `metadata_json`.
+- Re-ingesting is idempotent per path + hash. Earlier evidence and conversations are never deleted.
+- After evidence, ingestion syncs the 14 agents and their dated profiles from each employee export, loads souls from `data/souls.json`, and generates concerns for every released day that has none.
+- The container entrypoint runs the same initialisation on start, then starts the API.
 
 ## Data model
 
-The backend will use Bun and TypeScript with a local Turso database, as selected by the owner on 16 November 2026. A fresh-clone run must not require a hosted database or its credentials. Basic local read, write and persistence operations passed with Bun 1.4.2 and `@tursodatabase/database` 0.8.3 on the development machine; evaluator-platform compatibility and the final package configuration remain to be verified. Use React with Vite for the UI, Hono on Bun for the API, and the AI SDK for streaming responses. Detailed search implementation and integration verification remain open.
-
-The owner agreed to a seven-table structure; exact columns remain adjustable during implementation.
-
-| Table | Planned columns and purpose |
+| Table | Purpose |
 | --- | --- |
-| `sources` | `id`, `path`, `sha256`, `file_type`, `source_kind`, `released_at`; one row per original file version, distinguishing transcripts from data-room sources |
-| `evidence` | `id`, `source_id`, `locator_json`, `text`, optional `data_json`, `metadata_json`; unified extracted passages/rows, with structured source fields and separate interpretive metadata |
-| `agents` | `employee_id` (primary key), `full_name`, `work_email`, `department`, `title`, `manager_id`, `join_date`, `location`, `soul`; the 14 selected profiles |
-| `conversations` | `id`, `user_id`, `agent_id`, `kind`, `created_at`; `kind` distinguishes analyst/person chats, with null `agent_id` for the analyst |
-| `messages` | `id`, `conversation_id`, `role`, `content`, `created_at`, `knowledge_cutoff`; persistent history, with content able to retain AI SDK message parts and tool interactions |
-| `concerns` | `id`, `knowledge_cutoff`, `title`, `description`, `impact`, `urgency`, `evidence_strength`, `scoring_reasons_json`, `score`, `generated_at`; ranked results and their inputs |
-| `concern_evidence` | `concern_id`, `evidence_id`, `rationale`; supporting evidence for each concern |
+| `sources` | One row per original file version: path, sha256, file type, `data_room`/`transcript`, release day, `released_at` |
+| `evidence` | Extracted passages and rows: locator, text, `data_json`, `metadata_json` |
+| `agents` | Stable identity of the 14 people: ID, name, email, join date, soul |
+| `agent_profiles` | Department, title, manager, location, status, exit date, keyed by `effective_from` = release of the export that recorded it (D033) |
+| `conversations` | One per chat; `kind` is `analyst` or `person`, `agent_id` null for the analyst |
+| `messages` | AI SDK message parts as JSON, with the `knowledge_cutoff` they were asked under |
+| `concerns` | Ranked worries per cutoff: title, description, impact, urgency, evidence strength, reasons, score, rank, model |
+| `concern_evidence` | Evidence rows behind each concern, with rationale |
 
-Use no separate records, entities, aliases, claims, conflicts or assumptions tables initially. Optional evidence metadata holds agent associations, aliases and conflict annotations; documentation records development review reasoning and is not ingested. Structured source values belong in `data_json`, separate from interpretive metadata. Keep original and dated evidence rather than overwrite it so historical answers remain possible.
+There are no separate tables for entities, claims or conflicts. Aliases (A005) live in code; conflicts and source-trust decisions live in `TRANSCRIPT_NOTES.md` and `ASSUMPTIONS.md`.
 
-Status and exit date remain in evidence rather than agent-profile columns. Agent employee-field refresh must preserve historical evidence, while `soul` remains stable across imports. Log invented persona details in `ASSUMPTIONS.md`.
+The 14 agents are VX002–VX007, VX009–VX012, VX014, VX015, VX017 and VX018 (D024). Ananya (CEO), Sid (left 31 Oct), Divya, Imran, Kavya and the contractor Snehal have no agent; their records are still evidence.
 
-The owner selected these 14 person agents from the highlighted employee-sheet rows: Manoj Kumar (VX002), Meera Iyer (VX003), Vikram Menon (VX004), Deepa Joshi (VX005), Nikhil Bose (VX006), Priya Nair (VX007), Arjun Das (VX009), Karthik Subramanian (VX010), Aisha Khan (VX011), Sneha Kulkarni (VX012), Fatima Sheikh (VX014), Rohan Banerjee (VX015), Lakshmi Pillai (VX017) and Rahul Verma (VX018). Ananya Rao (CEO), Divya Reddy (Sales), Siddharth Mehta (departed under A001), Imran Siddiqui (Support) and Kavya Narayan (Support) have no person agent. Their source records remain ingested.
+## Answering a question
 
-## Temporal and privacy boundaries
+1. **Cutoff.** The UI sends the selected day. `pointInTime` (`src/chat/point-in-time.ts`) finds dates in the question with a regex parser ("18 Nov", "2026-11-18", "18/11", "last Monday", …). The cutoff becomes the end of that day (23:59 IST), but only ever narrows the selected cutoff, never widens it. The UI shows "Answering as of …".
+2. **Evidence.** `evidenceAtCutoff` returns the latest version of each source released by the cutoff, drops restricted payroll rows and masks individual pay amounts in other text (A002).
+3. **Person scope.** For a person agent, `scopedEvidence` keeps only rows connected to that person: emails they sent, received or were copied on; calls they spoke in; their own employee row, their manager's and their reports'; Jira, git, on-call, incident and leave rows naming them; and other rows that mention them. Agents can't see other people's email.
+4. **Context.** A person agent gets a working brief (role, open Atlas tickets, recent commits, on-call, incidents, leave, mail, follow-ups still waiting, transcript mentions), each line tagged `[E<id>]`, plus their soul and a summary of earlier conversations with the CEO before the cutoff. The analyst gets deterministic summaries of large tables and its recent chat history.
+5. **Generation.** A `ToolLoopAgent` (`src/chat/agent.ts`) with up to 3 steps. Tools: `search_evidence` (keyword search, TF-IDF with stemming and misheard-name aliases; exports scored slightly above transcripts) and `summarize_table` (analyst only). The cutoff, person scope and pay rules are passed in by the backend; the model can't change them. If nothing was found, the last step is forced to admit it.
+6. **Answer.** Short, with `[E…]` citations, "I don't know" or "the sources disagree" when that's the honest answer, and a final `Confidence: high|medium|low — reason` line. The reply streams to the UI over SSE. It's saved only if it completed and was grounded in the brief or a search.
+7. **No record.** If the selected person has no profile at the narrowed date, the reply comes from code without a model call.
 
-Event dates describe when something happened; release timestamps describe when the cockpit could know it. Filter evidence and all derived facts, summaries, agent context, and concerns by the requested knowledge cutoff. Unknown or conflicting dates stay explicit. No Day Two or later evidence may affect a Day One answer.
+Chat citations are not validated at runtime; the eval checks them.
 
-The owner confirmed that the user can select a knowledge date and both initial retrieval and optional searches exclude material released after that date. When no date is selected, use the latest release available in the local dataset as the cutoff. The date input's interface remains open. Apply the same cutoff to derived records and person-agent context, not just source passages.
+## Concerns ("what should I worry about")
 
-T2 requires aggregate-only payroll information for the CEO. Filter individual salary fields before model context and prevent person-specific salary answers or revealing aggregates. Exact enforcement and allowed aggregation granularity need implementation and tests.
-
-## Agents and concerns
-
-The owner confirmed one shared agent implementation with 14 distinct profiles and separate evidence for each person on 16 November 2026. Person agents may use evidence explicitly connected to the person or their work, plus broadly shared company information; access to other material is unknown unless supported by a record. Salary restrictions still apply. Profiles must support role, workload, history, and personal life. Label invented personal details as assumptions; they cannot substantiate business answers. Persist conversations so an agent can refer back to what it discussed with the CEO in later sessions and on subsequent days. Conversation memory records what was said; generated statements are not automatically verified company facts. Historical answers must also exclude conversation content that would introduce knowledge beyond the selected cutoff. Conversation memory is separate for each agent: an agent can retrieve its own earlier CEO conversations across sessions and days, while shared company knowledge comes from ingested evidence. Memory selection remains open. Lack of records is not evidence of idleness. How to determine broad sharing remains open.
-
-Implement the concern view after the first cited-answer path works. The model proposes concerns and factor scores from filtered evidence. Backend code validates each factor's 1–3 range and ranks concerns using `score = 2 × impact + urgency + evidence strength`, as selected by the owner on 16 November 2026. Impact has the greatest weight; weak evidence lowers priority without automatically hiding a potentially serious concern. The formula is deterministic for fixed inputs, but model-proposed inputs may vary between runs. Ranking must cite evidence and expose the rationale and uncertainty. Preserve the ability to reject unsupported requested rankings and record written pushback to voice notes. Concern scoring is a separate deterministic ranking mechanism from the model-performed arithmetic in conversational answers.
-
-Use the following initial criteria, with a short evidence-based reason for every factor score. Break equal total scores by urgency first; further tie handling is deferred to implementation.
+Generated at ingestion for each release cutoff, so a Day 1 view never uses Day 2 evidence. Using `generateStructured`, the model proposes concerns from a cutoff-filtered evidence pack and scores impact, urgency and evidence strength from 1 to 3, giving reasons. A second pass checks each claim against only the rows it cites. Concerns with invalid citations are dropped. If too few remain, the previous briefing is kept. The backend ranks with `score = 2 × impact + urgency + evidence strength`, ties broken by urgency. The whiteboard shows the top three; every scored concern is stored and viewable.
 
 | Factor | 1 | 2 | 3 |
 | --- | --- | --- | --- |
-| Business impact | Limited | Team-level | Company or critical project |
+| Impact | Limited | Team-level | Company or critical project |
 | Urgency | Monitor | Act soon | Act now |
 | Evidence strength | Tentative or conflicting | Direct single source | Corroborated independent sources |
 
-## Trust and review
+## Office view
 
-Prefer system exports over machine transcripts when sources disagree, while reporting the discrepancy and reducing confidence where appropriate. Neither source is automatically correct; retain attributed claims and their evidence. A preference does not resolve a conflict by itself: ARR and burn remain unresolved under A007. AI may surface conflicts; the project owner must approve source-trust resolutions and record their reasoning in `TRANSCRIPT_NOTES.md`.
+`officeAtCutoff` (`src/agents/office.ts`) builds what the office shows at a cutoff, all from cited evidence:
 
-## Verification and delivery
+- reporting lines and open-item lines, drawn on hover or focus;
+- one status icon per person: leave, then on-call, then an unresolved item, then recent work, hidden after 30 days;
+- a raised hand for recorded requests to the CEO, with "no response found" when none is recorded.
 
-The owner requires a React frontend and a single Docker container for the deployed application, including the backend and local Turso database. Persist database files, source files and conversation history in mounted storage so container replacement does not erase them. Hosted model calls remain external to the container. The UI uses React/Vite and the backend uses Hono on Bun.
+People appear and leave according to their dated profiles.
 
-Run two verification layers through one root test command:
+## Trust rules
 
-1. Deterministic checks for ingestion and repeat imports, release-date and access filters, persistent per-agent memory, and fixed concern scoring.
-2. At least 25 automated questions with expected answers through the real chat pipeline and configured hosted model, including at least five refusal/uncertainty cases. Check expected facts, source references and uncertainty rather than exact wording. Cover calculations and incomplete coverage, aliases, conflicting claims, salary privacy and later-evidence leakage.
+- Exports are preferred over machine transcripts but don't settle a conflict on their own. Conflicts are reported, and the owner records the reasoning in `TRANSCRIPT_NOTES.md`.
+- The cutoff, person scope and salary rules are enforced in `src/retrieval`, never left to the model.
+- Invented personal details (souls, A008) shape tone only and are never evidence.
 
-The live-model layer requires network access and the configured API key, can incur provider costs, and may expose model variability. Neither layer has been implemented or run yet.
+## Model and deployment
 
-The evaluator supplies the original release pack at a documented local path and a hosted-model API key through environment variables. With those prerequisites, one setup/run command installs dependencies, initializes the local database, ingests the sources and starts UI/API. Preserve existing conversation history on subsequent runs. Do not commit the release pack or credentials. Exact command names and the default set of releases ingested at startup remain to be defined.
+- AI SDK with Google Gemini (`GEMINI_MODEL`, default `gemini-3.5-flash-lite`; key in `GOOGLE_GENERATIVE_AI_API_KEY`). If the key is missing, a clear error is shown instead of an answer.
+- Small talk uses low thinking; questions that need evidence use the model default.
+- `bun run dev` starts the API on :8787 and Vite on :5173. `bun run start` builds the UI and serves it from the API.
+- Docker: one container (Bun 1.4.4) holds the API, the built UI and the embedded database. `compose.yaml` mounts `./data` so the database, release packs and conversations survive container replacement.
 
-Provide one documented fresh-clone setup/run command and one test command. Defer autonomous post-31-October simulation until mandatory scope works.
+## Verification
+
+- `bun test tests`: deterministic tests for ingestion and re-ingestion, cutoff and pay filters, dated profiles and reorgs, office relationships and status, chat history, auth, the database browser and container init.
+- `bun run eval`: 26 live questions (`tests/fixtures/eval-questions.ts`) through the real agent and model against the ingested database. Checked by fixed rules, with no LLM judge: required phrases and citations, forbidden later-date facts, and refusals. Includes date-leak pairs (before and after a release), salary refusals, "no record" answers and agent-to-agent email boundaries. `EVAL_TIMEOUT_MS` (default 120 s) and `EVAL_DELAY_MS` control pacing.
+
+## Not built
+
+Agents that keep generating new activity after 31 Oct 2026 (stretch goal).
