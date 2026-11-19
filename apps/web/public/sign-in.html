@@ -18,7 +18,7 @@
 <body>
   <main>
     <h1>Veloxa Digital HQ</h1>
-    <form method="post" action="/api/login">
+    <form method="post" action="api/login">
       <label for="passphrase">Passphrase</label>
       <input id="passphrase" type="password" autocomplete="current-password" required autofocus>
       <button type="submit">Sign in</button>
@@ -42,7 +42,7 @@
           body: JSON.stringify({ passphrase: field.value }),
         })
         if (response.ok) {
-          window.location.replace('/')
+          window.location.replace('./')
           return
         }
         const body = await response.json()

@@ -38,7 +38,7 @@ export function Chat(props: ChatProps) {
 
 function Conversation({ agent, cutoff, conversation, speaker, suggestions, initialQuestion, onFooter, history }: ChatProps & { history: ChatMessage[] }) {
   const transport = useMemo(() => new DefaultChatTransport<ChatMessage>({
-    api: '/api/chat',
+    api: 'api/chat',
     prepareSendMessagesRequest: ({ messages }) => ({ body: { agent, cutoff, conversation, message: messages.at(-1) } }),
   }), [agent, cutoff, conversation])
 

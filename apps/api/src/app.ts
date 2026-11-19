@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
+import type { DeploySettings } from "./config";
 import { handleError } from "./http";
 import { agents } from "./routes/agents";
 import { auth } from "./routes/auth";
@@ -12,12 +13,12 @@ import { status } from "./routes/status";
 
 const WEB_DIST = "apps/web/dist";
 
-export function createApp(passphrase: string | undefined, production: boolean) {
-  const loginPage = production ? `${WEB_DIST}/sign-in.html` : "apps/web/public/sign-in.html";
+export function createApp(passphrase: string | undefined, settings: DeploySettings) {
+  const loginPage = settings.serveBuild ? `${WEB_DIST}/sign-in.html` : "apps/web/public/sign-in.html";
   const app = new Hono()
     .onError(handleError)
     .use(compress())
-    .route("/", auth(passphrase, production, loginPage))
+    .route("/", auth(passphrase, settings, loginPage))
     .route("/api/status", status)
     .route("/api/concerns", concerns)
     .route("/api/agents", agents)
@@ -25,7 +26,7 @@ export function createApp(passphrase: string | undefined, production: boolean) {
     .route("/api/ingest", ingest)
     .all("/api/*", (c) => c.json({ error: "API route not found." }, 404));
 
-  if (production && existsSync(WEB_DIST)) {
+  if (settings.serveBuild && existsSync(WEB_DIST)) {
     app.use("*", serveStatic({ root: WEB_DIST }));
     app.get("*", serveStatic({ path: `${WEB_DIST}/index.html` }));
   }

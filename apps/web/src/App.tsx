@@ -64,7 +64,7 @@ export default function App() {
   const logout = async () => {
     try {
       await api.logout()
-      window.location.replace('/login')
+      window.location.replace('login')
     } catch (e) {
       setError((e as Error).message)
     }

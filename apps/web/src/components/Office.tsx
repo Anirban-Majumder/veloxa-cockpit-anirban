@@ -9,7 +9,7 @@ import type { Agent, OfficeData } from '../lib/api'
  */
 const W = 640
 const H = 416
-const ART = '/office/'
+const ART = 'office/'
 
 const at = (x: number, y: number, w: number, h: number, z?: number): CSSProperties => ({
   left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%`, width: `${(w / W) * 100}%`, height: `${(h / H) * 100}%`, zIndex: z,

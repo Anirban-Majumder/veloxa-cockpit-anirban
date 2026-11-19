@@ -6,6 +6,8 @@ const api = `http://127.0.0.1:${process.env.PORT ?? 8787}`
 
 export default defineConfig({
   root: import.meta.dirname,
+  // Relative asset URLs let one build serve at / locally and under PUBLIC_BASE_PATH behind the proxy.
+  base: './',
   plugins: [
     react(),
     tailwindcss(),

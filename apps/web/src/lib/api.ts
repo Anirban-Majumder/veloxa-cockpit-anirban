@@ -71,22 +71,22 @@ export type ChatMessage = UIMessage<{ asOf?: string; briefSources?: EvidenceRef[
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init)
-  if (res.status === 401) window.location.replace('/login')
+  if (res.status === 401) window.location.replace('login')
   const body = await res.json().catch(() => ({ error: `Server returned ${res.status}` }))
   if (!res.ok) throw new Error(body.error ?? `Server returned ${res.status}`)
   return body as T
 }
 
 const chatUrl = (agent: string, cutoff?: string, conversation?: number) =>
-  `/api/chat?${new URLSearchParams({ agent, ...(cutoff && { cutoff }), ...(conversation && { conversation: String(conversation) }) })}`
+  `api/chat?${new URLSearchParams({ agent, ...(cutoff && { cutoff }), ...(conversation && { conversation: String(conversation) }) })}`
 
 export const api = {
-  session: () => request<{ enabled: boolean }>('/api/session'),
-  logout: () => request<{ ok: boolean }>('/api/logout', { method: 'POST' }),
-  status: () => request<Status>('/api/status'),
-  office: (cutoff: string) => request<OfficeData>(`/api/agents/office?cutoff=${encodeURIComponent(cutoff)}`),
+  session: () => request<{ enabled: boolean }>('api/session'),
+  logout: () => request<{ ok: boolean }>('api/logout', { method: 'POST' }),
+  status: () => request<Status>('api/status'),
+  office: (cutoff: string) => request<OfficeData>(`api/agents/office?cutoff=${encodeURIComponent(cutoff)}`),
   concerns: (cutoff: string) =>
-    request<{ cutoff: string | null; concerns: Concern[] }>(`/api/concerns?cutoff=${encodeURIComponent(cutoff)}`),
+    request<{ cutoff: string | null; concerns: Concern[] }>(`api/concerns?cutoff=${encodeURIComponent(cutoff)}`),
   chatHistory: (agent: string, cutoff: string, conversation?: number) =>
     request<ChatMessage[]>(chatUrl(agent, cutoff, conversation)),
   newConversation: (agent: string) =>

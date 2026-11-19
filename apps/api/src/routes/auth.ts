@@ -1,8 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
+import type { DeploySettings } from "../config";
 import { HttpError, readBody, rejectForeignOrigins } from "../http";
 
 const SESSION = "veloxa_session";
@@ -11,14 +12,25 @@ const FAILURE_WINDOW_MS = 60_000;
 const MAX_FAILURES = 5;
 const loginBody = z.object({ passphrase: z.string() });
 const hash = (value: string) => createHash("sha256").update(value).digest();
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
-export function auth(passphrase: string | undefined, production: boolean, loginPage: string) {
-  if (!passphrase && production) throw new Error("VELOXA_PASSPHRASE must be set in production.");
-  if (!passphrase) console.warn("VELOXA_PASSPHRASE is unset. Authentication is disabled in development.");
+/** Behind the local reverse proxy every request comes from loopback, so trust its X-Real-IP there and only there. */
+function clientIp(c: Context) {
+  const remote = c.env ? getConnInfo(c).remote.address : undefined;
+  const forwarded = c.req.header("x-real-ip")?.trim();
+  if (remote && LOOPBACK.has(remote) && forwarded) return forwarded;
+  return remote ?? "unknown";
+}
 
-  const expectedHash = passphrase ? hash(passphrase) : undefined;
+export function auth(passphrase: string | undefined, settings: Pick<DeploySettings, "appEnv" | "basePath" | "publicOrigins">, loginPage: string) {
+  const production = settings.appEnv === "prod";
+  if (!passphrase && production) throw new Error("VELOXA_PASSPHRASE must be set when APP_ENV=prod.");
+  if (!production) console.warn("APP_ENV=dev: authentication, HTTPS cookies, PUBLIC_BASE_PATH and PUBLIC_ORIGINS are off.");
+
+  const base = settings.basePath;
+  const expectedHash = production && passphrase ? hash(passphrase) : undefined;
   const signingKey = passphrase ? createHmac("sha256", passphrase).update("veloxa-session-v1").digest("hex") : "";
-  const cookieOptions = { path: "/", httpOnly: true, sameSite: "Strict", secure: production } as const;
+  const cookieOptions = { path: base ? `${base}/` : "/", httpOnly: true, sameSite: "Strict", secure: production } as const;
   const failuresByIp = new Map<string, number[]>();
   let nextSweep = 0;
 
@@ -48,18 +60,18 @@ export function auth(passphrase: string | undefined, production: boolean, loginP
       if (typeof expiresAt === "string" && Number(expiresAt) > Date.now()) return next();
 
       if (path === "/api" || path.startsWith("/api/")) throw new HttpError(401, "Authentication required.");
-      return c.redirect("/login");
+      return c.redirect(`${base}/login`);
     })
-    .use("/api/*", rejectForeignOrigins)
+    .use("/api/*", rejectForeignOrigins(settings.publicOrigins))
     .get("/login", (c) => {
-      if (!expectedHash) return c.redirect("/");
+      if (!expectedHash) return c.redirect(`${base}/`);
       return c.body(Bun.file(loginPage).stream(), 200, { "Content-Type": "text/html; charset=utf-8" });
     })
     .get("/api/session", (c) => c.json({ enabled: !!expectedHash }))
     .post("/api/login", async (c) => {
       if (!expectedHash) return c.json({ ok: true });
 
-      const ip = (c.env ? getConnInfo(c).remote.address : undefined) ?? "unknown";
+      const ip = clientIp(c);
       function checkLimit(now: number) {
         const failures = recentFailures(ip, now);
         if (failures.length >= MAX_FAILURES) {
