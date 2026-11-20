@@ -116,6 +116,15 @@ describe("release gating", () => {
 });
 
 describe("search", () => {
+  test("a broad Atlas blocker search surfaces the board update, version history and call", async () => {
+    const throughDay3 = await openDb(":memory:");
+    for (const release of releases.slice(0, 3)) await ingestRelease(throughDay3, release);
+    const rows = await searchEvidence(throughDay3, "What is blocking Atlas and what evidence conflicts?", day(3).releasedAt, { limit: 10 });
+    expect(rows.some(({ text }) => text.includes("unplanned reliability work"))).toBe(true);
+    expect(rows.some(({ text }) => text.includes("Version: Atlas GA; Release Date: 2026-12-15"))).toBe(true);
+    expect(rows.some(({ text }) => text.includes("couple of weeks of buffer"))).toBe(true);
+  });
+
   test("word forms and misheard names still match", async () => {
     expect(matches("resigned", "resignation")).toBe(true);
     expect(matches("resign", "resignation")).toBe(true);

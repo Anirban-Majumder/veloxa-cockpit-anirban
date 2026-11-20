@@ -15,7 +15,7 @@ export function getModel() {
   return { model: google(settings.modelId), modelId: settings.modelId };
 }
 
-/** Small talk should answer in a second or two; everything else keeps the model's default depth. */
+/** Use low reasoning depth for interactive chat backed by retrieved records. */
 export const lightThinking = {
   google: { thinkingConfig: { thinkingLevel: "low" } } satisfies GoogleLanguageModelOptions,
 };

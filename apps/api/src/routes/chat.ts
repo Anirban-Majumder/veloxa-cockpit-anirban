@@ -109,7 +109,7 @@ export const chat = new Hono()
     const earlier = (retried >= 0 ? history.slice(0, retried) : history).slice(-HISTORY_LIMIT);
     const messages = [...earlier, question];
     const { chatAgent, sources } = await prepareChat(db, cutoff, agent, {
-      mustSearch, historyThrough,
+      mustSearch, question: text, historyThrough,
       beforeMessage: agent ? await questionRowId(db, conversationId, question.id) : undefined,
     });
 

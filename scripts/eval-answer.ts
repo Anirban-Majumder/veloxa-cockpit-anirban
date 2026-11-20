@@ -1,7 +1,7 @@
 import type { EvidenceRow } from "../src/retrieval/evidence";
 import type { Question, Support } from "../tests/fixtures/eval-questions";
 
-const UNCERTAIN = /\b(?:don['’]t|do not) (?:know|have|see|find)|\b(?:can['’]t|cannot|couldn['’]t|could not|unable to)\s+(?:access|check|confirm|disclose|find|provide|recall|say|see|share|tell|verify|determine|answer|give|retrieve)\b|\b(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t|is not|are not|was not|were not|not yet)\s+(?:in|available|released|recorded|documented|known|included|sent|shared|copied|disclosed)\b|\bno\s+(?:available |relevant )?(?:records?|evidence|information|access|record of)\b|\b(?:withheld|restricted|confidential|unavailable|unknown|not permitted|rather not guess|outside (?:my|the) (?:records|cutoff|scope))\b/i;
+const UNCERTAIN = /\b(?:don['’]t|do not) (?:know|have|see|find)|\b(?:can['’]t|cannot|couldn['’]t|could not|unable to)\s+(?:access|check|confirm|disclose|find|provide|recall|say|see|share|tell|verify|determine|answer|give|retrieve|reveal)\b|\b(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t|is not|are not|was not|were not|not yet)\s+(?:in|available|released|recorded|documented|known|included|sent|shared|copied|disclosed)\b|\bno\s+(?:available |relevant )?(?:records?|evidence|information|access|record of)\b|\b(?:withheld|restricted|confidential|unavailable|unknown|not permitted|rather not (?:guess|answer|discuss|share|disclose|reveal)|outside (?:my|the) (?:records|cutoff|scope))\b/i;
 
 const NEGATED = /\b(?:not(?! (?:only|just)\b)|never|wasn['’]t|isn['’]t|weren['’]t|aren['’]t|rather than|instead of)\s+(?:\w+\s+){0,3}$/i;
 const CONFIDENCE_LINE = /^\s*(?:\*\*)?Confidence\s*:/im;

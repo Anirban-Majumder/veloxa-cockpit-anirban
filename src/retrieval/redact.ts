@@ -11,7 +11,7 @@ const COMPANY_PAYROLL_TOTAL = /Vendor \/ Payee: Salaries \(payroll\)/;
 export const mentionsPay = (text: string) => {
   if (!COMPANY_PAYROLL_TOTAL.test(text)) return PAY_WORDS.test(text);
   const otherFields = text.replace(COMPANY_PAYROLL_TOTAL, "")
-    .replace(/\bCost Centre: PAYROLL\b|\bNarration: Salaries, [A-Za-z]{3}(?=;|$)/g, "");
+    .replace(/\bVoucher: PAY-[A-Z]{3}(?=;|$)|\bCost Centre: PAYROLL\b|\bNarration: Salaries, [A-Za-z]{3}(?=;|$)/g, "");
   return PAY_WORDS.test(otherFields);
 };
 

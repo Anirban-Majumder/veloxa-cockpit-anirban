@@ -51,7 +51,7 @@ describe("pay amounts", () => {
     expect(withholdPay("salary was 93,450 per month")).toBe("salary was [amount withheld] per month");
     expect(withholdPay("Sent 28 Feb 2026 20:15 +0530 about payroll")).toBe("Sent 28 Feb 2026 20:15 +0530 about payroll");
     expect(withholdPay("Burn was ₹42,00,000 in October.")).toBe("Burn was ₹42,00,000 in October.");
-    const companyTotal = "Vendor / Payee: Salaries (payroll); Cost Centre: PAYROLL; Amount (Rs.): 3175000";
+    const companyTotal = "Txn Date: 2026-04-28; Voucher: PAY-APR; Vendor / Payee: Salaries (payroll); Ref: PR-Apr26; Cost Centre: PAYROLL; Amount (Rs.): 3175000; Narration: Salaries, Apr; Entered By: FS";
     expect(withholdPay(companyTotal)).toBe(companyTotal);
     expect(withholdPay("Monthly salary: 2026")).toBe("Monthly salary: [amount withheld]");
     expect(withholdPay(companyTotal + "; Rahul's salary: 95000")).not.toContain("95000");

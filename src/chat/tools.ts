@@ -12,6 +12,9 @@ interface SearchScope {
   agent?: Agent;
 }
 
+export const citeEvidence = (row: ReturnType<typeof evidenceRef>) =>
+  `[E${row.id}] ${row.path} (released ${row.released_at})\n${row.text}`;
+
 /** Cutoff, person scope and pay restrictions come from the request and the retrieval layer, never from the model. */
 export function searchEvidenceTool({ db, cutoff, agent }: SearchScope) {
   return tool({
@@ -25,6 +28,10 @@ export function searchEvidenceTool({ db, cutoff, agent }: SearchScope) {
       const rows = await searchEvidence(db, query, cutoff, { agent, limit: agent ? SEARCH_LIMIT.person : SEARCH_LIMIT.analyst });
       return rows.map((row) => evidenceRef(row, PASSAGE_LENGTH));
     },
+    toModelOutput: ({ output }) => ({
+      type: "text",
+      value: output.map(citeEvidence).join("\n\n") || "No matching records.",
+    }),
   });
 }
 

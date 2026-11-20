@@ -5,7 +5,7 @@ import { pointInTime } from "../src/chat/point-in-time";
 import { openDb } from "../src/db/client";
 import { runIngest } from "../src/ingestion/run";
 import { scopedEvidence } from "../src/retrieval/search";
-import { questions, type Question } from "../tests/fixtures/eval-questions";
+import { questions as allQuestions, type Question } from "../tests/fixtures/eval-questions";
 import { answerFailures } from "./eval-answer";
 
 const color = process.stdout.isTTY && process.env.NO_COLOR === undefined;
@@ -16,6 +16,10 @@ const statusStyle = { PASS: [32, "✓"], FAIL: [31, "✗"], ERROR: [33, "!"] } a
 type Status = keyof typeof statusStyle;
 
 try {
+  const ids = process.argv.slice(2);
+  const unknown = ids.filter((id) => !allQuestions.some((question) => question.id === id));
+  if (unknown.length) throw new Error(`Unknown eval question IDs: ${unknown.join(", ")}`);
+  const questions = ids.length ? allQuestions.filter(({ id }) => ids.includes(id)) : allQuestions;
   const { modelId } = getModel();
   const db = await openDb(":memory:");
   const { cutoff: selected, upTo, changedFiles, agents } = await runIngest(db, { concerns: false }, (line) => {
@@ -30,7 +34,7 @@ try {
     const { cutoff } = pointInTime(question.text, selected);
     const agent = question.agent ? await findAgent(db, question.agent, cutoff) : undefined;
     if (question.agent && !agent) throw new Error(`Agent unavailable at ${cutoff}`);
-    const { chatAgent, sources } = await prepareChat(db, cutoff, agent, { mustSearch: true });
+    const { chatAgent, sources } = await prepareChat(db, cutoff, agent, { mustSearch: true, question: question.text });
     const result = await chatAgent.generate({ prompt: question.text, abortSignal: AbortSignal.timeout(Number(process.env.EVAL_TIMEOUT_MS ?? 120_000)) });
     const rows = await scopedEvidence(db, cutoff, agent);
     const shown = new Set(sources.map((source) => source.id));

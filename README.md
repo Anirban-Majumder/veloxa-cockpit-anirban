@@ -46,12 +46,12 @@ Don't run the host API and the container on the same `./data` at the same time.
 
 ```sh
 bun test tests          # deterministic tests, no model calls
-bun run eval            # 26 live questions through the real agent and model
+bun run eval            # 30 live questions through the real agent and model
 bun run typecheck
 bun run lint
 ```
 
-`bun run eval` needs the API key and an ingested database. Each answer is checked by fixed rules (required facts and citations, forbidden later-date facts, correct refusals), with no LLM judge. The questions are in `tests/fixtures/eval-questions.ts`; 10 of them test refusing or admitting uncertainty, including date-leak pairs before and after a release, salary requests, missing data and other people's email. `EVAL_TIMEOUT_MS` (default 120000) and `EVAL_DELAY_MS` (default 5000) set the pacing.
+`bun run eval` needs the API key and reads the release packs into an in-memory database. Pass question IDs to rerun specific cases, for example `bun run eval manager ownership-after`. Each answer is checked by fixed rules (required facts and citations, forbidden later-date facts, correct refusals), with no LLM judge. The questions are in `tests/fixtures/eval-questions.ts`; 10 of them test refusing or admitting uncertainty, including date-leak pairs before and after a release, salary requests, missing data and other people's email. `EVAL_TIMEOUT_MS` (default 120000) and `EVAL_DELAY_MS` (default 5000) set the pacing.
 
 ## Configuration
 

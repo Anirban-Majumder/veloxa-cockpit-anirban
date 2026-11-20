@@ -9,6 +9,14 @@ export const tokenize = (s: string) =>
 /** Transcript spellings recorded in ASSUMPTIONS.md A005. */
 const EXTRA_ALIASES: Record<string, string[]> = { VX007: ["pria"], VX010: ["kartik"], VX011: ["ayesha"], VX014: ["fatima shaikh"] };
 const MISHEARD: Record<string, string[]> = { priya: ["pria"], karthik: ["kartik"], aisha: ["ayesha"], sheikh: ["shaikh"] };
+const BLOCKER_TERMS = ["blocker", "blocked", "delay", "paused"];
+const RELATED: Record<string, string[]> = {
+  blocker: BLOCKER_TERMS,
+  blockers: BLOCKER_TERMS,
+  blocking: BLOCKER_TERMS,
+  overload: ["workload", "overwork"],
+  overloaded: ["workload", "overwork"],
+};
 
 /** "resignation" also finds "resigned"; short words must match exactly. */
 const stem = (term: string) => (term.length >= 7 ? term.slice(0, 6) : term.length > 4 ? term.slice(0, -1) : term);
@@ -96,7 +104,7 @@ export async function searchEvidence(db: Db, query: string, cutoff: string,
   const { excludeIds } = opts;
   const rows = excludeIds ? visible.filter((row) => !excludeIds.has(row.id)) : visible;
   const asked = tokenize(query);
-  const q = [...new Set([...asked, ...asked.flatMap((t) => MISHEARD[t] ?? [])])];
+  const q = [...new Set([...asked, ...asked.flatMap((t) => MISHEARD[t] ?? RELATED[t] ?? [])])];
   const docs = rows.map((r) => ({ r, toks: tokenize(`${r.path} ${r.text}`) }));
   const df = new Map<string, number>();
   for (const d of docs) for (const t of new Set(d.toks)) df.set(t, (df.get(t) ?? 0) + 1);
@@ -110,7 +118,16 @@ export async function searchEvidence(db: Db, query: string, cutoff: string,
     if (r.source_kind === "data_room") s *= 1.1; // D016: exports preferred over machine transcripts
     return { r, s: s / Math.sqrt(1 + toks.length / 60) };
   });
-  const hits = scored.filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, opts.limit ?? 24).map((x) => x.r);
+  // A broad project search should surface documents and version records alongside repetitive ticket rows.
+  const seenBySheet = new Map<string, number>();
+  const ranked = scored.filter(({ s }) => s > 0).sort((a, b) => b.s - a.s).map(({ r, s }) => {
+    const sheet = (JSON.parse(r.locator_json) as { sheet?: string }).sheet ?? "";
+    const key = `${r.source_id}:${sheet}`;
+    const earlier = seenBySheet.get(key) ?? 0;
+    seenBySheet.set(key, earlier + 1);
+    return { r, s: s / (1 + 0.4 * Math.max(0, earlier - 1)) };
+  });
+  const hits = ranked.sort((a, b) => b.s - a.s).slice(0, opts.limit ?? 24).map(({ r }) => r);
   // A person always knows their own core record, even if the question has no matching words.
   if (opts.agent && hits.length < 6) for (const r of rows) if (!hits.includes(r) && hits.length < 12) hits.push(r);
   return hits;
