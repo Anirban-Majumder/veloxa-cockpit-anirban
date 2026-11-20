@@ -41,3 +41,13 @@
 - Eval marked correct answers as failures: "threads" didn't match `thread`, and an answer giving the email's sent date (1 Sep) instead of "this week" failed. Leave ranges written "and ending on" weren't accepted.
 - Eval questions timed out at 120 s. The AI blamed the questions; checking showed they were correct and the agent was slow (default thinking on every search step).
 - `ARCHITECTURE.md` and `README.md` still described the Day 1 plan (tests "not implemented", wrong release-pack path). Rewritten to match the code.
+
+## 20 November 2026 (IST)
+
+**Incremental concern briefings (`71485a7`).** The first briefing uses the full evidence pack. Later releases update it using the previous briefing, newly released evidence and a bounded set of related older records. Each run rechecks the records cited for its claims. D039 records the trade-off that an earlier mistake can carry forward.
+
+**Chat retrieval and evaluation (`7614bdd`).** Chat now prefetches records relevant to the question into the working brief and returns cited text from evidence searches. Search ranking draws from more sheets, and answer rules were tightened. Added evaluation questions and tests, and enabled reruns by question ID.
+
+**Submission documentation (`894235c`, `d099943`).** Moved project records into `docs/`, updated references, and kept the README and agent instructions at the repository root. Added the demo to the README and embedded it with GitHub’s video player. The README and architecture document record the live Gemini evaluation result of 30/30, including 10 refusal or uncertainty cases. [Recorded eval output](media/eval-run.txt)
+
+**Transcript review and container decision (`83f9809`).** Reorganized T1–T6d across all four release days so each entry records its evidence, contradiction and conclusion, with source paths under `data/Release_Packs/`. D040 records the owner’s decision to run the container as root so the API can write its database to the host’s bind-mounted `./data` across different host user IDs.

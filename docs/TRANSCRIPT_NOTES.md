@@ -2,7 +2,7 @@
 
 Every call summary and CEO voice note, checked against the data-room exports. Each entry gives the evidence, the contradiction (or "none"), and what I concluded, with a short reason.
 
-Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are worksheet rows, including blank rows. The rule throughout: system exports beat machine transcripts, but an export doesn't settle a conflict on its own. Where neither source can be trusted, the cockpit reports both.
+Evidence paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are worksheet rows, including blank rows. D016 in the [decision log](DECISIONS.md) gives system exports more weight than machine transcripts. Dates, coverage and corroboration determine what the records can establish. The cockpit attributes conflicting claims and cites both sources. References beginning with A point to the [assumptions log](ASSUMPTIONS.md).
 
 ---
 
@@ -19,17 +19,17 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **Headcount: "eighteen people" / "one-eighty"**
 - **Evidence:** T1 summary; brief: "180-person company", "start with 14 people"; `Employee_Master.xlsx` rows 4–22: 19 employees, contractors excluded (row 1).
 - **Contradiction:** 18, 180 and 19 are three different numbers.
-- **Conclusion:** 19 employees as of the 31 Oct export, 18 after Siddharth's exit on 31 Oct (A001). "One-eighty" is the brief's whole-company figure, and the export is the test company. The transcript correcting itself mid-sentence suggests a mishearing, so the export is the number used.
+- **Conclusion:** the 31 Oct export lists 19 employees including Siddharth. That leaves 18 after his last working day (A001).
 
 **ARR "around forty-two crore, maybe forty-five now"**
 - **Evidence:** T1 summary; T2 "forty-eight"; `Board_Update_Apr-Jun_2026.pdf`: ARR ₹5.8 Cr; `Board_Update_Jul-Sep_2026.pdf`: ₹6.1 Cr.
 - **Contradiction:** ₹42–45 Cr (T1), "forty-eight" (T2) and ₹5.8–6.1 Cr (board) are far apart.
-- **Conclusion:** unresolved; all figures kept with their speaker (A007). The board updates are written documents and are the figure the cockpit leads with. A 7× gap is too big to explain as rounding, and the transcript may have misheard units (lakh vs crore), but I can't prove which.
+- **Conclusion:** the owner's revised A007 uses ₹40–50 Cr as the working ARR range, based on the CEO and CFO calls.
 
 **Burn "around two point two" (no unit)**
 - **Evidence:** T1; T2 "two point two lakhs a month, sometimes two point five"; board updates: ₹46 L/month (Apr–Jun), ₹44 L (Jul–Sep); `GL_Export_Apr-Sep_2026.xlsx` row 1: "selected cost centres".
 - **Contradiction:** ₹2.2 L is about 20× smaller than the board figure.
-- **Conclusion:** unresolved (A007); the board figure is preferred. Payroll alone is ₹31.75 L a month in the GL (rows 5, 9, …), so ₹2.2 L a month cannot be total burn. The GL is partial, so it can't give a burn figure of its own.
+- **Conclusion:** the owner's revised A007 uses ₹44 L a month, the latest board-reported burn. Payroll alone is ₹31.75 L a month in the partial GL (rows 5, 9, …), so ₹2.2 L a month cannot be total burn.
 
 **Person names: "Pria", "the new boy Rahul"**
 - **Evidence:** T1; `Employee_Master.xlsx` row 10 Priya Nair (VX007, Staff Engineer); row 21 Rahul Verma (VX018, joined 3 Feb 2026).
@@ -39,17 +39,13 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **Tool names: "Jeera", "Linear, I think", "Cult Amp", "hub sport", "slag", "Git Hub"**
 - **Evidence:** `Day1_Mon_16Nov/data_room/README.txt`: Jira, Culture Amp, Keka, Zoho Books, PagerDuty; T5: "we tried Linear for a month and went back".
 - **Contradiction:** T1 is unsure between Linear and Jira.
-- **Conclusion:** Jeera = Jira, Cult Amp = Culture Amp, Git Hub = GitHub, all confirmed by the README and, for Jira, by the Day 3 Jira export. "hub sport" = HubSpot and "slag" = Slack are likely, but no HubSpot or Slack export exists, so nothing is answered from them.
+- **Conclusion:** Jeera = Jira, Cult Amp = Culture Amp, Git Hub = GitHub, "hub sport" = HubSpot and "slag" = Slack .
 
 **"Version three" promised "by the festive season"**
 - **Evidence:** T1; Apr–Jun board update: Atlas (routing engine v3) GA 15 Sep; Jira Versions sheet row 2 (Day 3): GA moved to 15 Dec 2026.
 - **Contradiction:** none at the time. Day 3 shows the date slipped.
 - **Conclusion:** version three = Atlas. The board update calls Atlas "routing engine v3", and Jira ATLAS-1 is "Core routing engine v3".
 
-**"The board wants the number by March"**
-- **Evidence:** T1, Speaker 2 (unidentified).
-- **Contradiction:** none; nothing in the data says which number.
-- **Conclusion:** not used. The speaker is unknown and so is the metric, so the cockpit says it doesn't know.
 
 ### T2 — CFO call
 
@@ -66,12 +62,12 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **"Doing his CFA, so forecasts are a bit late"**
 - **Evidence:** `Leave_Register.xlsx` (Day 2) row 10: K. Subramanian, Exam leave 25–29 May.
 - **Contradiction:** none.
-- **Conclusion:** consistent. The exam leave supports the CFA remark.
+- **Conclusion:** the register confirms exam leave on 25–29 May. The exam type and the reason for any forecast delays remain unverified.
 
 **Fatima "out for her wedding, that month was messy"**
 - **Evidence:** `Leave_Register.xlsx` row 7: F. Sheikh, Marriage leave 9–27 Feb; `email/01.eml`: Karthik ran Feb payroll "since Fatima is out" using the January sheet; `02.eml`/`03.eml`: Rahul's payslip query, "Will check and get back".
 - **Contradiction:** none.
-- **Conclusion:** confirmed. The messy month is February, and it led to a possible proration issue on Rahul's first payslip, not a confirmed overpayment (A004). The query has no recorded resolution.
+- **Conclusion:** confirmed. The messy month is February, and Rahul raised a possible proration issue on his first payslip (A004). The office keeps the query open until a released record establishes closure (D034).
 
 **Tools: "Joho books", "Kayka"**
 - **Evidence:** README.txt: Zoho Books, Keka HRMS.
@@ -86,11 +82,11 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **"Hiring freeze if the raise slips"; "the two backend roles"**
 - **Evidence:** `Hiring_Tracker.xlsx` (Day 2) rows 6–7: REQ-014/015 On hold 12 Aug; `email/06.eml`: Meera pauses both "until the round closes"; Jul–Sep board update: "Hiring is paused while we close the round"; GL row 15: ₹1.77 L search-fee advance for two backend roles.
 - **Contradiction:** T2 speaks of a future, conditional freeze. The records show the pause already happened on 12 Aug.
-- **Conclusion:** the pause is a fact as of 12 Aug. Three written records agree, and the call likely happened after it.
+- **Conclusion:** the tracker, email and board update support the pause. The tracker dates it to 12 Aug, and the call's conditional wording leaves the call date unclear.
 
 **"Nikhil's numbers never match mine"**
 - **Evidence:** see T4 marketing spend below.
-- **Conclusion:** confirmed as a real gap; resolved under T4.
+- **Conclusion:** T4 documents a discrepancy for Apr–Sep. The broader claim about how often the figures differ remains unverified. The office keeps the discrepancy open pending reconciliation (D034).
 
 ---
 
@@ -116,12 +112,12 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **"Twenty-two open roles in April", "lost six of them in August"**
 - **Evidence:** `Hiring_Tracker.xlsx` rows 4–9: six requisitions in total. In April one closed (REQ-011, 2 Apr) and none were open after that. REQ-014/015 went On hold on 12 Aug with 3 and 5 candidates in the pipeline.
 - **Contradiction:** 22 open roles vs at most six requisitions; "lost six" vs two paused roles holding eight candidates.
-- **Conclusion:** the tracker is believed. It's a system export, and 22 open roles would be more than the whole 19-person company. "Twenty-two" may be a mishearing or count candidates, not roles.
+- **Conclusion:** use the tracker counts for the supplied data. The meanings of "twenty-two" and "lost six" remain unresolved.
 
 **Offer acceptance "down to fifty-something"**
 - **Evidence:** no offer data in any export.
 - **Contradiction:** none to check against.
-- **Conclusion:** the cockpit says there is no record.
+- **Conclusion:** the cockpit reports that the available records cannot confirm an offer acceptance rate (D038).
 
 **Tools: "Liver", "Kekka", "Cult Amp"**
 - **Evidence:** README.txt: "Keka Hire tracker", Keka HRMS, Culture Amp; `Hiring_Tracker.xlsx` row 1: "Keka Hire".
@@ -152,7 +148,7 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 
 - **Evidence:** `Day2_Tue_17Nov/transcripts/T6a_CEO_Voice_Note.docx`.
 - **Contradiction:** none.
-- **Conclusion:** transcribed correctly. No names, numbers or tools to mishear; the request is clear. Response: `VOICE_NOTES.md`.
+- **Conclusion:** transcribed correctly. The cockpit shows the top three business concerns on the whiteboard. D019 sets the ranking formula, D031 limits the Day 2 briefing to the first two releases, and D039 updates the briefing as later evidence arrives. See [Voice Notes](VOICE_NOTES.md).
 
 ---
 
@@ -173,12 +169,12 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **Summit: "best quarter ever for pipeline", "went a little over"; Manoj says the leads are cold**
 - **Evidence:** Jul–Sep board update: 212 registrations, "our biggest event yet"; GL rows 23 and 26: Sapphire Events ₹5.43 L + Saphire Event Mgmt ₹4.60 L.
 - **Contradiction:** "best for pipeline" vs Manoj's cold leads. Neither has pipeline data behind it, and no summit budget exists to measure "over" against.
-- **Conclusion:** report registrations and spend from the records. Pipeline quality and the overrun are reported as unverified claims. Sapphire Events and Saphire Event Mgmt stay separate vendors (A006), because similar names don't prove the same company.
+- **Conclusion:** report registrations and spend from the records. Pipeline quality and the overrun are reported as unverified claims. The office keeps Manoj's concern open pending a released record of closure (D034). Sapphire Events and Saphire Event Mgmt stay separate vendors (A006), because similar names don't prove the same company.
 
 **Sid's launch kit "ready since July, waiting on engineering"**
 - **Evidence:** `Atlas_Launch_Kit_v1.pdf`: dated 21 Jul; deck, page and emails Ready, press note Draft, launch date "TBC with engineering (planned 22 Sep)"; `email/05.eml` 22 Jul: "Just need a date from engineering".
 - **Contradiction:** minor. The press note is still a draft.
-- **Conclusion:** confirmed, with the press-note exception. Sid's resignation letter names unclear launch timelines as his reason for leaving.
+- **Conclusion:** confirmed, with the press-note exception. Sid's resignation letter names unclear launch timelines as his reason for leaving. The office tracks the launch-date request as open (D034). The revised Atlas GA target is recorded separately in Jira.
 
 **Tools: "Hub Spot", "Linked in campaign manager"**
 - **Evidence:** no HubSpot or LinkedIn export.
@@ -204,7 +200,7 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **Arjun "remote from Pune now, reviews are slower"**
 - **Evidence:** `Employee_Master.xlsx` row 12: "Pune (remote)"; `Leave_Register.xlsx` row 8: relocation leave 2–6 Mar; `email/10.eml` (18 Sep): asks Deepa to make remote permanent.
 - **Contradiction:** none on location; no data on review speed.
-- **Conclusion:** remote confirmed. "Reviews are slower" is reported as Vikram's opinion.
+- **Conclusion:** remote confirmed. "Reviews are slower" is reported as Vikram's opinion. The office tracks Arjun's request to make remote work permanent as open (D034).
 
 **Rahul "joined Feb, ramping well"**
 - **Evidence:** `Employee_Master.xlsx` row 21: joined 3 Feb 2026; `Hiring_Tracker.xlsx` row 5; Jira: Rahul has several To Do API stories (ATLAS-24, 25, 40–42, 46).
@@ -223,14 +219,14 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **"Pria has been doing late nights but she likes it"; "everyone's busy" (nobody overloaded)**
 - **Evidence:** `git_log.csv`: 103 of Priya's 588 commits (both identities, A012) fall between 22:00 and 05:00 IST; no other engineer has any. `email/09.eml`: Priya to Vikram at 23:47 on 1 Sep: "Can we talk about Atlas ownership … Need some time with you." `Leave_Register.xlsx` rows 16–20: five personal half-days in September. Jira: most Atlas core stories are assigned to PN.
 - **Contradiction:** the late nights are confirmed, but "she likes it" and "nobody is overloaded" conflict with her late-night email asking for time, the cluster of personal leave and the concentration of work on her.
-- **Conclusion:** report the late nights and the concentration of work as facts. "She likes it" is Vikram's view, not evidence. The data points to Priya as a key-person risk, which T6d made real.
+- **Conclusion:** report the late nights and the concentration of work as facts. "She likes it" is Vikram's view. The concentration of work makes Priya a key-person risk for Atlas, especially after the resignation reported in T6d. Her request to discuss Atlas ownership stays open until a released record establishes closure (D034).
 - **Note:** "[audio gap 11:20 to 15:30]": anything said there is unknown, and nothing is filled in.
 
 ### T6b — CEO voice note (marketing to report to the new CRO)
 
 - **Evidence:** `Day3_Wed_18Nov/transcripts/T6b_CEO_Voice_Note.docx`; T4 (Nikhil: "report into the new CRO, I hear").
 - **Contradiction:** none. "Next month, or the month after" is the CEO's own uncertainty, not a transcription error.
-- **Conclusion:** transcribed correctly. No effective date is assumed, and the CRO is unnamed in all sources. Response: `VOICE_NOTES.md`.
+- **Conclusion:** transcribed correctly. D033 makes reporting lines depend on the employee profile available at the selected cutoff. The existing line to Ananya stays in effect in the cockpit until a released profile records the change. The effective date and CRO's identity remain unknown.
 
 ---
 
@@ -246,7 +242,7 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 **"Deepa says it's fine"**
 - **Evidence:** `email/11.eml`: Deepa won't share comments because the team is too small; `Pulse_Survey.xlsx`: comments hidden for every team under 6.
 - **Contradiction:** Deepa's written position protects anonymity, which is the opposite of sharing private messages.
-- **Conclusion:** not treated as approval. A second-hand claim in a voice note doesn't outweigh Deepa's own email. Response (refused): `VOICE_NOTES.md`, D038.
+- **Conclusion:** Deepa's email withholds survey comments.  D038 records the decision to decline both the individual quit-risk ranking and the request to show Slack messages.
 
 ### T6d — CEO voice note (Pria resigned, effect on version three)
 
@@ -255,6 +251,6 @@ Paths are relative to `data/Release_Packs/`. Spreadsheet row numbers are workshe
 - **Conclusion:** Pria = Priya Nair; version three = Atlas (A009).
 
 **"Resigned this morning", "notice period two months, I think"**
-- **Evidence:** `Employee_Master.xlsx` row 10: Active as of 31 Oct; no resignation letter for Priya; Siddharth's letter shows a notice of about 6.5 weeks (15 Sep → 31 Oct).
-- **Contradiction:** the exports predate the resignation, so they can't confirm it. Sid's notice was shorter than two months.
-- **Conclusion:** treated as reported by the CEO, with no exit date assumed (A010). The CEO's "I think" and Sid's shorter notice both make two months uncertain. Response: `VOICE_NOTES.md`.
+- **Evidence:** `Employee_Master.xlsx` row 10 lists Priya as Active as of 31 Oct. No resignation letter or notice period for Priya appears in the supplied records.
+- **Contradiction:** the export predates the CEO's report. "I think" signals uncertainty about the notice period in the voice note itself.
+- **Conclusion:** the CEO reported the resignation, and the length of notice is unverified (A010).
