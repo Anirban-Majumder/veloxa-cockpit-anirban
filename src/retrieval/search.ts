@@ -6,7 +6,7 @@ const STOP = new Set("a an the of to in on for and or is are was were be been wh
 export const tokenize = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9₹. -]+/g, " ").split(/\s+/).map((t) => t.replace(/^[.-]+|[.-]+$/g, "")).filter((t) => t.length > 1 && !STOP.has(t));
 
-/** Transcript spellings recorded in ASSUMPTIONS.md A005. */
+/** Transcript spellings recorded in docs/ASSUMPTIONS.md A005. */
 const EXTRA_ALIASES: Record<string, string[]> = { VX007: ["pria"], VX010: ["kartik"], VX011: ["ayesha"], VX014: ["fatima shaikh"] };
 const MISHEARD: Record<string, string[]> = { priya: ["pria"], karthik: ["kartik"], aisha: ["ayesha"], sheikh: ["shaikh"] };
 const BLOCKER_TERMS = ["blocker", "blocked", "delay", "paused"];

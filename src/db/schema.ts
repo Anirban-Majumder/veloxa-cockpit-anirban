@@ -1,4 +1,4 @@
-// Core seven-table schema (D026). Columns follow ARCHITECTURE.md "Data model".
+// Core seven-table schema (D026). Columns follow docs/ARCHITECTURE.md "Data model".
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS sources (
   id            INTEGER PRIMARY KEY,

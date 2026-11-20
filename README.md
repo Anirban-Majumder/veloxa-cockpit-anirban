@@ -2,7 +2,11 @@
 
 A CXO cockpit for Veloxa, the fictional company in the Hiyaku Systems hackathon. The CEO opens a pixel-art office with 14 people as AI agents, sees the top three worries on the whiteboard, and asks the analyst or any person a question. Answers are short, cite the records behind them, state a confidence level, say "I don't know" or "the sources disagree" when that is the honest answer, and only use what was released by the selected date.
 
-How it works: [ARCHITECTURE.md](ARCHITECTURE.md).
+How it works: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Demo
+
+https://github.com/Anirban-Majumder/veloxa-cockpit-anirban/raw/main/docs/media/cockpit-demo.mp4
 
 ## One-command setup (Docker)
 
@@ -53,6 +57,12 @@ bun run lint
 
 `bun run eval` needs the API key and reads the release packs into an in-memory database. Pass question IDs to rerun specific cases, for example `bun run eval manager ownership-after`. Each answer is checked by fixed rules (required facts and citations, forbidden later-date facts, correct refusals), with no LLM judge. The questions are in `tests/fixtures/eval-questions.ts`; 10 of them test refusing or admitting uncertainty, including date-leak pairs before and after a release, salary requests, missing data and other people's email. `EVAL_TIMEOUT_MS` (default 120000) and `EVAL_DELAY_MS` (default 5000) set the pacing.
 
+### Latest eval result
+
+30/30 passed, refusals 10/10, on `gemini-3.5-flash-lite` with the cutoff at Day 4 (20 Nov 2026). The full output is in [docs/media/eval-run.txt](docs/media/eval-run.txt). The model is live, so individual answers can vary from run to run.
+
+![bun run eval: 30/30 passed, refusals 10/10](docs/media/eval-30-of-30.png)
+
 ## Configuration
 
 All settings are in `.env.example`.
@@ -74,11 +84,11 @@ API docs are at `/openapi.json`. A read-only database browser is at `/db` when `
 
 ## Project records
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): the system as built.
-- [ASSUMPTIONS.md](ASSUMPTIONS.md): assumptions with source, confidence and what would change them.
-- [TRANSCRIPT_NOTES.md](TRANSCRIPT_NOTES.md): suspected mishearings and contradictions, and what I concluded.
-- [DECISIONS.md](DECISIONS.md): choices that could go either way.
-- [VOICE_NOTES.md](VOICE_NOTES.md): responses to CEO voice notes T6a–T6d.
-- [AI_LOG.md](AI_LOG.md): what AI was used for, where it was wrong, what I changed.
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md): the system as built.
+- [ASSUMPTIONS.md](docs/ASSUMPTIONS.md): assumptions with source, confidence and what would change them.
+- [TRANSCRIPT_NOTES.md](docs/TRANSCRIPT_NOTES.md): suspected mishearings and contradictions, and what I concluded.
+- [DECISIONS.md](docs/DECISIONS.md): choices that could go either way.
+- [VOICE_NOTES.md](docs/VOICE_NOTES.md): responses to CEO voice notes T6a–T6d.
+- [AI_LOG.md](docs/AI_LOG.md): what AI was used for, where it was wrong, what I changed.
 
 Veloxa and all its records are fictional. Source materials are in `data/Release_Packs/`, one folder per day; each counts as released at 10:00 IST on its date.
