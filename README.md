@@ -6,7 +6,7 @@ How it works: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Demo
 
-https://github.com/Anirban-Majumder/veloxa-cockpit-anirban/raw/main/docs/media/cockpit-demo.mp4
+https://github.com/user-attachments/assets/0b9e69a9-d88a-4d6b-88d4-40ecfd91260d
 
 ## One-command setup (Docker)
 

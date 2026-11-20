@@ -122,7 +122,7 @@ People appear and leave according to their dated profiles.
 ## Verification
 
 - `bun test tests`: deterministic tests for ingestion and re-ingestion, cutoff and pay filters, dated profiles and reorgs, office relationships and status, chat history, auth, the database browser and container init.
-- `bun run eval`: 26 live questions (`tests/fixtures/eval-questions.ts`) through the real agent and model against the ingested database. Checked by fixed rules, with no LLM judge: required phrases and citations, forbidden later-date facts, and refusals. Includes date-leak pairs (before and after a release), salary refusals, "no record" answers and agent-to-agent email boundaries. `EVAL_TIMEOUT_MS` (default 120 s) and `EVAL_DELAY_MS` control pacing.
+- `bun run eval`: 30 live questions, 10 of them refusal or uncertainty cases (`tests/fixtures/eval-questions.ts`), through the real agent and model against the ingested database. Checked by fixed rules, with no LLM judge: required phrases and citations, forbidden later-date facts, and refusals. Includes date-leak pairs (before and after a release), salary refusals, "no record" answers and agent-to-agent email boundaries. `EVAL_TIMEOUT_MS` (default 120 s) and `EVAL_DELAY_MS` control pacing. Latest run: 30/30 passed ([output](media/eval-run.txt)).
 
 ## Not built
 
