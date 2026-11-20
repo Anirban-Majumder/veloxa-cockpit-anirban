@@ -340,3 +340,15 @@ Update the previous briefing using newly released evidence and a bounded set of 
 Why: sending the full history makes daily token cost grow with every release.
 
 Trade-off: an early mistake can carry forward. Each run re-checks cited rows against their full text.
+
+### D040 — Container runs as root
+
+Status: confirmed by the owner, 20 Nov 2026.
+
+The image has no `USER` line, so the app runs as root inside the container.
+
+Why: Compose bind-mounts `./data` from the host, and the API writes `veloxa.db` there. A fixed non-root user inside the image would only work when its UID matches the owner of the cloned folder. On Linux hosts with a different UID, the first start would fail to create the database, breaking the one-command setup the submission is judged on.
+
+Alternatives: a non-root user with `user: "${UID}:${GID}"` in Compose (needs the variables exported on every host), an entrypoint that `chown`s the volume and drops privileges (more moving parts), or a named volume instead of a bind mount (the database is no longer visible in `./data`).
+
+Trade-off: running as non-root limits the damage of a container escape. That matters less here: the port binds to `127.0.0.1` only, the data is fictional, and it is a local evaluation tool. A production deployment should use a non-root user with a named volume.
