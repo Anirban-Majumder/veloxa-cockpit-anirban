@@ -8,6 +8,13 @@ How it works: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 https://github.com/user-attachments/assets/0b9e69a9-d88a-4d6b-88d4-40ecfd91260d
 
+## Features
+
+- **Interactive office** with React sprites and 14 agents with Turso-backed chat history.
+- **Top three concerns** ranked by `2 × impact + urgency + evidence strength`.
+- **Cited Q&A** streamed via AI SDK `ToolLoopAgent` with TF-IDF evidence search.
+- **Point-in-time views** using dated profiles and server-side release, mail and pay filters.
+
 ## One-command setup (Docker)
 
 Needs Docker with Compose (or Podman with `podman compose`) and a Google AI Studio key ([get one](https://aistudio.google.com/apikey)). From a fresh clone:
